@@ -1,0 +1,184 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&family=Poppins:wght@300;400;500;600;700&family=Open+Sans:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Default theme values - will be overridden by ThemeContext */
+  --header-bg: #4f46e5;
+  --header-text-color: #ffffff;
+  --sidebar-bg: #4338ca;
+  --sidebar-text-color: #ffffff;
+  --content-bg: #f9fafb;
+  --primary-color: #4f46e5;
+  --text-color: #111827;
+  --bg-color: #ffffff;
+  --border-color: #e5e7eb;
+  --card-bg: #ffffff;
+  --input-bg: #ffffff;
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --base-font-size: 14px;
+}
+
+.dark {
+  --content-bg: #111827;
+  --text-color: #f9fafb;
+  --bg-color: #1f2937;
+  --border-color: #374151;
+  --card-bg: #1f2937;
+  --input-bg: #1f2937;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family) !important;
+  font-size: var(--base-font-size) !important;
+  color: var(--text-color) !important;
+  background-color: var(--content-bg) !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Apply font size and family globally */
+html {
+  font-size: var(--base-font-size);
+}
+
+* {
+  font-family: var(--font-family) !important;
+}
+
+/* Apply base font size to all text elements */
+body, p, span, div, h1, h2, h3, h4, h5, h6, a, button, input, select, textarea, label, td, th, li {
+  font-size: inherit;
+}
+
+/* Ensure Tailwind uses the CSS variables */
+@layer base {
+  html {
+    font-family: var(--font-family);
+    font-size: var(--base-font-size);
+    background-color: var(--content-bg);
+    color: var(--text-color);
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+  
+  body {
+    font-family: var(--font-family) !important;
+    font-size: var(--base-font-size) !important;
+    background-color: var(--content-bg) !important;
+    color: var(--text-color) !important;
+  }
+  
+/* Dark mode global styles */
+.dark {
+  color-scheme: dark;
+}
+
+/* Override common Tailwind classes for dark mode */
+.dark .bg-white,
+.dark [class*="bg-white"] {
+  background-color: var(--card-bg) !important;
+}
+
+.dark .text-gray-900,
+.dark [class*="text-gray-900"] {
+  color: var(--text-color) !important;
+}
+
+.dark .text-gray-800 {
+  color: #e5e7eb !important;
+}
+
+.dark .text-gray-700 {
+  color: #d1d5db !important;
+}
+
+.dark .text-gray-600 {
+  color: #9ca3af !important;
+}
+
+.dark .text-gray-500 {
+  color: #6b7280 !important;
+}
+
+.dark .text-gray-400 {
+  color: #9ca3af !important;
+}
+
+.dark .border-gray-200,
+.dark .border-gray-300 {
+  border-color: var(--border-color) !important;
+}
+
+.dark .bg-gray-50,
+.dark .bg-gray-100 {
+  background-color: var(--bg-color) !important;
+}
+
+.dark input[type="text"],
+.dark input[type="number"],
+.dark input[type="email"],
+.dark input[type="date"],
+.dark input[type="month"],
+.dark input[type="password"],
+.dark select,
+.dark textarea {
+  background-color: var(--input-bg) !important;
+  color: var(--text-color) !important;
+  border-color: var(--border-color) !important;
+}
+
+.dark table {
+  background-color: var(--card-bg) !important;
+}
+
+.dark thead {
+  background-color: var(--bg-color) !important;
+}
+
+.dark tbody tr {
+  background-color: var(--card-bg) !important;
+}
+
+.dark tbody tr:hover {
+  background-color: var(--bg-color) !important;
+}
+
+/* Apply dark mode to common elements */
+.dark * {
+  border-color: var(--border-color);
+}
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Theme-aware utility classes */
+.theme-header-bg {
+  background-color: var(--header-bg);
+}
+
+.theme-sidebar-bg {
+  background-color: var(--sidebar-bg);
+}
+
+.theme-content-bg {
+  background-color: var(--content-bg);
+}
+
+.theme-primary {
+  background-color: var(--primary-color);
+}
+
+.theme-primary-text {
+  color: var(--primary-color);
+}
+
+.theme-text {
+  color: var(--text-color);
+}
