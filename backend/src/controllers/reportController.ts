@@ -38,22 +38,28 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
     }
     const totalStudents = await studentsQuery.first();
 
-    // Get total beds - calculate from room_types since capacity column was removed
+    // Get total beds - Prioritize r.capacity column if it exists, otherwise use room_type parsing
     let totalBedsQuery = db('rooms as r')
       .leftJoin('room_types as rt', 'r.room_type_id', 'rt.room_type_id')
       .select(db.raw(`
         SUM(
-          CASE 
-            WHEN rt.room_type_name REGEXP '^[0-9]+$' THEN CAST(rt.room_type_name AS UNSIGNED)
-            WHEN LOWER(rt.room_type_name) LIKE '%single%' THEN 1
-            WHEN LOWER(rt.room_type_name) LIKE '%double%' THEN 2
-            WHEN LOWER(rt.room_type_name) LIKE '%triple%' THEN 3
-            WHEN LOWER(rt.room_type_name) LIKE '%four%' OR LOWER(rt.room_type_name) LIKE '%4%' THEN 4
-            WHEN LOWER(rt.room_type_name) LIKE '%five%' OR LOWER(rt.room_type_name) LIKE '%5%' THEN 5
-            WHEN LOWER(rt.room_type_name) LIKE '%six%' OR LOWER(rt.room_type_name) LIKE '%6%' THEN 6
-            WHEN LOWER(rt.room_type_name) LIKE '%dormitory%' THEN 10
-            ELSE COALESCE(r.room_type_id, 0)
-          END
+          COALESCE(
+            NULLIF(r.capacity, 0),
+            CASE 
+              WHEN rt.room_type_name REGEXP '^[0-9]+$' THEN CAST(rt.room_type_name AS UNSIGNED)
+              WHEN LOWER(rt.room_type_name) LIKE '%single%' THEN 1
+              WHEN LOWER(rt.room_type_name) LIKE '%double%' THEN 2
+              WHEN LOWER(rt.room_type_name) LIKE '%triple%' THEN 3
+              WHEN LOWER(rt.room_type_name) LIKE '%four%' OR LOWER(rt.room_type_name) LIKE '%4%' THEN 4
+              WHEN LOWER(rt.room_type_name) LIKE '%five%' OR LOWER(rt.room_type_name) LIKE '%5%' THEN 5
+              WHEN LOWER(rt.room_type_name) LIKE '%six%' OR LOWER(rt.room_type_name) LIKE '%6%' THEN 6
+              WHEN LOWER(rt.room_type_name) LIKE '%seven%' OR LOWER(rt.room_type_name) LIKE '%7%' THEN 7
+              WHEN LOWER(rt.room_type_name) LIKE '%eight%' OR LOWER(rt.room_type_name) LIKE '%8%' THEN 8
+              WHEN LOWER(rt.room_type_name) LIKE '%dormitory%' THEN 10
+              ELSE 0
+            END,
+            1 -- Default to 1 if everything else fails
+          )
         ) as total_beds
       `));
     if (hostelIds.length > 0) {
