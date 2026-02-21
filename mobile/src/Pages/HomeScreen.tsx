@@ -33,7 +33,7 @@ export default function HomeScreen() {
     const load = useCallback(async () => {
         try {
             const [statsRes, todayRes, summaryRes] = await Promise.all([
-                api.get('/analytics/dashboard-stats'),
+                api.get('/reports/dashboard-stats'),
                 api.get('/income/analytics?type=day'),
                 api.get('/monthly-fees/summary')
             ]);

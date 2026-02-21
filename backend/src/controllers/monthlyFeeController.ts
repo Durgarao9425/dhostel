@@ -802,10 +802,9 @@ export const getStudentAllPayments = async (req: AuthRequest, res: Response) => 
 
 // Record a payment for a monthly fee
 export const recordPayment = async (req: AuthRequest, res: Response) => {
-  console.log('[recordPayment] Request received');
-  console.log('[recordPayment] Body:', req.body);
-  console.log('[recordPayment] Params:', req.params);
-  console.log('[recordPayment] User:', req.user);
+  console.log('!!! RECORD_PAYMENT_v3_START !!!');
+  console.log('[recordPayment] Body:', JSON.stringify(req.body));
+  console.log('[recordPayment] User:', JSON.stringify(req.user));
 
   try {
     const {
@@ -870,6 +869,12 @@ export const recordPayment = async (req: AuthRequest, res: Response) => {
       userDueDate = new Date(dYear, dMonth - 1, dDay);
     } else {
       userDueDate = new Date(due_date);
+    }
+
+    // Fallback if Date is Invalid
+    if (isNaN(userDueDate.getTime())) {
+      console.log('[recordPayment] Warning: Invalid due_date provided, using current date');
+      userDueDate = new Date();
     }
 
     // Get or create the monthly fee record
