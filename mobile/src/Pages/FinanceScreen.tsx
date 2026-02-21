@@ -492,21 +492,22 @@ export default function FinanceScreen() {
         if (!payAmount || parseFloat(payAmount) <= 0) {
             Alert.alert('Error', 'Please enter a valid amount'); return;
         }
+        if (!selectedFee?.fee_id) {
+            Alert.alert('Error', 'No fee record found. The student may not have a fee record for this month yet.'); return;
+        }
         try {
             setPayLoading(true);
             const payload: any = {
-                student_id: selectedFee.student_id,
                 amount: parseFloat(payAmount),
                 payment_date: payDate,
                 payment_mode_id: parseInt(payModeId || '1'),
                 notes: payNotes,
                 transaction_id: payTransactionId,
-                fee_month: selectedFee.fee_month || new Date().toISOString().slice(0, 7),
                 due_date: payDueDate,
             };
-            if (selectedFee.hostel_id) payload.hostel_id = selectedFee.hostel_id;
 
-            const res = await api.post('/monthly-fees/record-payment', payload);
+            // Correct route: POST /monthly-fees/:feeId/payment
+            const res = await api.post(`/monthly-fees/${selectedFee.fee_id}/payment`, payload);
             if (res.data.success) {
                 setCollectModalVisible(false);
                 Toast.show({
@@ -514,9 +515,6 @@ export default function FinanceScreen() {
                     text1: '✓ Payment Collected!',
                     text2: `₹${payAmount} recorded for ${selectedFee.first_name}`,
                 });
-
-                // Backend is the single source of truth for status/tabs/counts.
-                // Mark cache dirty and re-fetch from API.
                 STORE.dirty = true;
                 setTimeout(() => fetchData(true), 600);
             }

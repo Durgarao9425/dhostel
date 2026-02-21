@@ -169,7 +169,8 @@ export const createStudent = async (req: AuthRequest, res: Response) => {
       admission_status,
       status,
       room_id,
-      floor_number
+      floor_number,
+      monthly_rent
     } = req.body;
 
     // Determine hostel_id from JWT token for owners
@@ -379,8 +380,7 @@ export const createStudent = async (req: AuthRequest, res: Response) => {
     console.error('Create student error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to register student',
-      details: error?.message || String(error)
+      error: error?.message || 'Failed to register student'
     });
   }
 };
