@@ -916,7 +916,9 @@ export const recordPayment = async (req: AuthRequest, res: Response) => {
           const prevMonthDate = new Date(parseInt(year), parseInt(month) - 2, 1);
           const prevMonth = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
 
+          console.log(`[recordPayment] Student ${student_id}, FeeMonth ${feeMonth}, PrevMonth ${prevMonth}`);
           const carryForward = await getPreviousMonthBalance(student_id, prevMonth, trx);
+          console.log(`[recordPayment] CarryForward calculated: ${carryForward}`);
           const monthlyRent = parseFloat(student.monthly_rent || 0);
           const totalDue = monthlyRent + carryForward;
 
