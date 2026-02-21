@@ -492,9 +492,7 @@ export default function FinanceScreen() {
         if (!payAmount || parseFloat(payAmount) <= 0) {
             Alert.alert('Error', 'Please enter a valid amount'); return;
         }
-        if (!selectedFee?.fee_id) {
-            Alert.alert('Error', 'No fee record found. The student may not have a fee record for this month yet.'); return;
-        }
+
         try {
             setPayLoading(true);
             const payload: any = {
@@ -504,10 +502,17 @@ export default function FinanceScreen() {
                 notes: payNotes,
                 transaction_id: payTransactionId,
                 due_date: payDueDate,
+                // Include these to allow backend to create fee if it doesn't exist
+                student_id: selectedFee.student_id,
+                hostel_id: selectedFee.hostel_id,
+                fee_month: monthStr, // Selected month
+                fee_id: selectedFee.fee_id || null
             };
 
-            // Correct route: POST /monthly-fees/:feeId/payment
-            const res = await api.post(`/monthly-fees/${selectedFee.fee_id}/payment`, payload);
+            // Use '0' if fee_id is missing; backend handles creation
+            const fId = selectedFee.fee_id || 0;
+            const res = await api.post(`/monthly-fees/${fId}/payment`, payload);
+
             if (res.data.success) {
                 setCollectModalVisible(false);
                 Toast.show({
@@ -519,11 +524,12 @@ export default function FinanceScreen() {
                 setTimeout(() => fetchData(true), 600);
             }
         } catch (e: any) {
+            console.error('Collect error:', e);
             Alert.alert('Error', e.response?.data?.error || 'Payment failed.');
         } finally {
             setPayLoading(false);
         }
-    }, [payAmount, payDate, payModeId, payNotes, payTransactionId, payDueDate, selectedFee, fetchData]);
+    }, [payAmount, payDate, payModeId, payNotes, payTransactionId, payDueDate, selectedFee, monthStr, fetchData]);
 
     const totalDebt = useMemo(() =>
         fees.reduce((s, f) => s + Math.max(0, sf(f.total_amount || f.total_due || f.monthly_rent) - sf(f.amount_paid || f.paid_amount)), 0),
