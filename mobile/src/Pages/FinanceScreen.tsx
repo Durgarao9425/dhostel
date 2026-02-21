@@ -347,6 +347,7 @@ export default function FinanceScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [currentDate, setCurrentDate] = useState(new Date());
     const [monthStr, setMonthStr] = useState(() => toLocalDateStr(new Date()).slice(0, 7));
+    const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
 
     // Modal
     const [collectModalVisible, setCollectModalVisible] = useState(false);
@@ -620,11 +621,6 @@ export default function FinanceScreen() {
                 <View style={S.headerTop}>
                     <View>
                         <Text style={S.headerTitle}>Finance Hub</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                            <Text style={S.debtText}>Due: ₹{totalDebt.toLocaleString('en-IN')}</Text>
-                            <View style={{ width: 1, height: 10, backgroundColor: 'rgba(255,255,255,0.4)' }} />
-                            <Text style={S.debtText}>Collected: ₹{(summary?.total_paid || 0).toLocaleString('en-IN')}</Text>
-                        </View>
                     </View>
                     <View style={{ flexDirection: 'row', gap: 10 }}>
                         <HeaderNotification navigation={navigation} /><ProfileMenu />
@@ -657,22 +653,31 @@ export default function FinanceScreen() {
                     )}
                 </View>
 
-                {/* Date Navigator replaces Filter Picker */}
-                <View style={[S.searchBar, { marginTop: 0, marginBottom: 12, justifyContent: 'space-between', backgroundColor: 'transparent', paddingHorizontal: 4 }]}>
-                    <TouchableOpacity onPress={() => shiftMonth(-1)} style={S.navArrow}>
-                        <ChevronLeft color="#64748B" size={20} />
-                    </TouchableOpacity>
-                    <View style={S.dateBadge}>
-                        <Calendar size={14} color="#64748B" style={{ marginRight: 6 }} />
-                        <Text style={S.dateBadgeText}>{getMonthLabel()}</Text>
-                    </View>
-                    <TouchableOpacity onPress={() => shiftMonth(1)} style={S.navArrow}>
-                        <ChevronRight color="#64748B" size={20} />
-                    </TouchableOpacity>
-                </View>
+                {/* Date Selection Area */}
+                <TouchableOpacity
+                    onPress={() => setDatePickerVisibility(true)}
+                    activeOpacity={0.7}
+                    style={S.dateBadgeLarge}
+                >
+                    <Calendar size={18} color={theme.primary} />
+                    <Text style={S.dateBadgeTextLarge}>{getMonthLabel()}</Text>
+                    <ChevronRight color="#94A3B8" size={20} />
+                </TouchableOpacity>
+
+                <DateTimePickerModal
+                    isVisible={isDatePickerVisible}
+                    mode="date"
+                    date={currentDate}
+                    onConfirm={(date) => {
+                        setDatePickerVisibility(false);
+                        setCurrentDate(date);
+                        STORE.dirty = true;
+                    }}
+                    onCancel={() => setDatePickerVisibility(false)}
+                />
 
                 {mode === 'Rent' && (
-                    <View style={S.filterSegment}>
+                    <View style={S.simpleFilterRow}>
                         {([
                             { key: 'Unpaid', label: 'Unpaid', count: unpaidCount, color: '#EF4444' },
                             { key: 'Partial', label: 'Partial', count: partialCount, color: '#3B82F6' },
@@ -683,15 +688,12 @@ export default function FinanceScreen() {
                                 <TouchableOpacity
                                     key={key}
                                     onPress={() => setStatusFilter(key)}
-                                    style={[S.segBtn, isActive && { backgroundColor: color }]}
-                                    activeOpacity={0.8}
+                                    style={[S.simpleFilterBtn, isActive && { backgroundColor: color + '20', borderColor: color }]}
                                 >
-                                    <Text style={[S.segLabel, isActive && { color: '#FFF' }]}>{label}</Text>
-                                    {count > 0 && (
-                                        <View style={[S.segBadge, isActive && { backgroundColor: 'rgba(255,255,255,0.3)' }]}>
-                                            <Text style={[S.segBadgeText, isActive && { color: '#FFF' }]}>{count}</Text>
-                                        </View>
-                                    )}
+                                    <Text style={[S.simpleFilterLabel, { color: isActive ? color : '#64748B' }]}>
+                                        {label} {count > 0 ? `(${count})` : ''}
+                                    </Text>
+                                    {isActive && <View style={[S.simpleFilterIndicator, { backgroundColor: color }]} />}
                                 </TouchableOpacity>
                             );
                         })}
@@ -717,36 +719,7 @@ export default function FinanceScreen() {
                     showsVerticalScrollIndicator={false}
                     initialNumToRender={10} maxToRenderPerBatch={10} windowSize={7}
                     removeClippedSubviews={Platform.OS === 'android'}
-                    ListHeaderComponent={mode === 'Expense' && expenses.length > 0 ? (
-                        <View style={S.expSummaryCard}>
-                            <View style={S.expSummaryLeft}>
-                                <Text style={S.expSummaryLabel}>THIS MONTH</Text>
-                                <Text style={S.expSummaryTotal}>
-                                    ₹{expenses
-                                        .filter(e => new Date(e.expense_date).getMonth() === new Date().getMonth())
-                                        .reduce((s, e) => s + sf(e.amount), 0)
-                                        .toLocaleString('en-IN')}
-                                </Text>
-                                <Text style={S.expSummaryCount}>{expenses.length} total expenses</Text>
-                            </View>
-                            <View style={S.expSummaryDivider} />
-                            <View style={S.expSummaryRight}>
-                                {Object.entries(
-                                    expenses.reduce((acc: any, e) => {
-                                        const k = e.category_name || 'Other';
-                                        acc[k] = (acc[k] || 0) + sf(e.amount);
-                                        return acc;
-                                    }, {})
-                                ).slice(0, 3).map(([cat, total]: any) => (
-                                    <View key={cat} style={S.expCatRow}>
-                                        <View style={[S.expCatBullet, { backgroundColor: catColor(cat) }]} />
-                                        <Text style={S.expCatName} numberOfLines={1}>{cat}</Text>
-                                        <Text style={S.expCatAmt}>₹{sf(total).toLocaleString('en-IN')}</Text>
-                                    </View>
-                                ))}
-                            </View>
-                        </View>
-                    ) : null}
+                    ListHeaderComponent={null}
                     ListEmptyComponent={
                         <View style={S.emptyWrap}>
                             <Text style={S.emptyEmoji}>
@@ -859,12 +832,14 @@ const S = StyleSheet.create({
     filterRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
     filterBtn: { flex: 1, paddingVertical: 9, borderRadius: 18, backgroundColor: '#E2E8F0', alignItems: 'center' },
     filterLabel: { fontSize: 12, fontWeight: '700', color: '#64748B' },
-    // New segmented filter
-    filterSegment: { flexDirection: 'row', backgroundColor: '#F1F5F9', borderRadius: 14, padding: 4, marginBottom: 6, gap: 0 },
-    segBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 9, borderRadius: 10, gap: 6 },
-    segLabel: { fontSize: 12, fontWeight: '800', color: '#64748B' },
-    segBadge: { backgroundColor: '#E2E8F0', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 10, minWidth: 20, alignItems: 'center' },
-    segBadgeText: { fontSize: 10, fontWeight: '800', color: '#64748B' },
+    // Simplified filters
+    simpleFilterRow: { flexDirection: 'row', gap: 8, marginTop: 4, marginBottom: 8 },
+    simpleFilterBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center' },
+    simpleFilterLabel: { fontSize: 13, fontWeight: '700' },
+    simpleFilterIndicator: { position: 'absolute', bottom: -5, width: 4, height: 4, borderRadius: 2 },
+
+    dateBadgeLarge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', paddingHorizontal: 16, paddingVertical: 14, borderRadius: 14, elevation: 1, marginBottom: 12, gap: 12 },
+    dateBadgeTextLarge: { fontSize: 16, fontWeight: '800', color: '#1E293B', flex: 1 },
     listContent: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 150 },
     loaderWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
     loaderText: { fontSize: 14, color: '#94A3B8', fontWeight: '600' },
