@@ -349,27 +349,11 @@ export const createStudent = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    // Also record admission fee payment if it's Paid (1 = Paid)
-    const admissionFee = parseFloat(req.body.admission_fee || 0);
-    const isAdmissionPaid = req.body.admission_status === 1 || req.body.admission_status === 'Paid';
-    if (admissionFee > 0 && isAdmissionPaid) {
-      try {
-        await db('fee_payments').insert({
-          student_id,
-          hostel_id,
-          amount: admissionFee,
-          payment_date: req.body.admission_date || new Date(),
-          payment_mode_id: 1, // Default to Cash/Direct
-          notes: 'Auto-recorded admission fee payment',
-          reason: 'Admission Fee',
-          created_at: new Date(),
-          updated_at: new Date()
-        });
-        console.log(`[createStudent] Auto-recorded admission fee payment for student ${student_id}`);
-      } catch (payError) {
-        console.error('[createStudent] Error auto-recording admission fee payment:', payError);
-      }
-    }
+    // NOTE: Admission fee is tracked on the student record itself (admission_fee + admission_status).
+    // We do NOT insert into fee_payments here because fee_payments.fee_id is NOT NULL
+    // and admission fees don't have a corresponding monthly_fee record.
+    // Admission fee tracking is handled separately on the student profile.
+    console.log(`[createStudent] Student ${student_id} created. Admission fee: ${req.body.admission_fee}, Status: ${req.body.admission_status}`);
 
     res.status(201).json({
       success: true,
