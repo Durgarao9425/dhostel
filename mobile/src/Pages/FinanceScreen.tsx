@@ -337,7 +337,7 @@ export default function FinanceScreen() {
     const route = useRoute<any>();
 
     const [mode, setMode] = useState<'Rent' | 'Expense'>('Rent');
-    const [statusFilter, setStatusFilter] = useState<'All' | 'Unpaid' | 'Partial' | 'Paid'>('All');
+    const [statusFilter, setStatusFilter] = useState<'Unpaid' | 'Partial' | 'Paid'>('Unpaid');
     const [search, setSearch] = useState('');
     const [fees, setFees] = useState<any[]>(() => STORE.fees);
     const [expenses, setExpenses] = useState<any[]>(() => STORE.expenses);
@@ -546,22 +546,14 @@ export default function FinanceScreen() {
 
                 // FIX: Status filter — use Sets so any backend variation is handled (case-insensitive)
                 const status = (f.fee_status ?? '').toLowerCase();
-
-                if (statusFilter === 'All') return true;
-
                 if (statusFilter === 'Unpaid') {
-                    // Show truly unpaid/overdue records
-                    // Also include records where due > 0 regardless of status label
                     const due = Math.max(0, sf(f.total_amount || f.total_due || f.monthly_rent) - sf(f.amount_paid || f.paid_amount));
-                    return UNPAID_STATUSES.has(status) || (due > 0 && !PAID_STATUSES.has(status) && !PARTIAL_STATUSES.has(status));
+                    return (UNPAID_STATUSES.has(status) || due > 0) && !PAID_STATUSES.has(status) && !PARTIAL_STATUSES.has(status);
                 }
                 if (statusFilter === 'Paid') {
-                    // Show fully paid records
                     return PAID_STATUSES.has(status);
                 }
                 if (statusFilter === 'Partial') {
-                    // Show partially paid records
-                    // Also catch: paid > 0 but not fully paid
                     const paid = sf(f.amount_paid || f.paid_amount || 0);
                     const total = sf(f.total_amount || f.total_due || f.monthly_rent || 0);
                     return PARTIAL_STATUSES.has(status) || (paid > 0 && total > 0 && paid < total);
@@ -674,21 +666,29 @@ export default function FinanceScreen() {
                 </View>
 
                 {mode === 'Rent' && (
-                    <View style={S.filterRow}>
+                    <View style={S.filterSegment}>
                         {([
-                            { key: 'All', label: 'All', count: fees.length },
-                            { key: 'Unpaid', label: 'Unpaid', count: unpaidCount },
-                            { key: 'Partial', label: 'Partial', count: partialCount },
-                            { key: 'Paid', label: 'Paid', count: paidCount },
-                        ] as const).map(({ key, label, count }) => (
-                            <TouchableOpacity key={key} onPress={() => setStatusFilter(key)}
-                                style={[S.filterBtn, statusFilter === key && { backgroundColor: theme.primary }]}>
-                                <Text style={[S.filterLabel, statusFilter === key && { color: '#FFF' }]}>
-                                    {label}
-                                    {count > 0 ? ` (${count})` : ''}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
+                            { key: 'Unpaid', label: 'Unpaid', count: unpaidCount, color: '#EF4444' },
+                            { key: 'Partial', label: 'Partial', count: partialCount, color: '#3B82F6' },
+                            { key: 'Paid', label: 'Paid', count: paidCount, color: '#10B981' },
+                        ] as const).map(({ key, label, count, color }) => {
+                            const isActive = statusFilter === key;
+                            return (
+                                <TouchableOpacity
+                                    key={key}
+                                    onPress={() => setStatusFilter(key)}
+                                    style={[S.segBtn, isActive && { backgroundColor: color }]}
+                                    activeOpacity={0.8}
+                                >
+                                    <Text style={[S.segLabel, isActive && { color: '#FFF' }]}>{label}</Text>
+                                    {count > 0 && (
+                                        <View style={[S.segBadge, isActive && { backgroundColor: 'rgba(255,255,255,0.3)' }]}>
+                                            <Text style={[S.segBadgeText, isActive && { color: '#FFF' }]}>{count}</Text>
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
+                            );
+                        })}
                     </View>
                 )}
             </View>
@@ -750,9 +750,7 @@ export default function FinanceScreen() {
                             </Text>
                             <Text style={S.emptyText}>
                                 {mode === 'Rent'
-                                    ? statusFilter === 'All'
-                                        ? 'No records found for this month'
-                                        : `No ${statusFilter.toLowerCase()} records found`
+                                    ? `No ${statusFilter.toLowerCase()} records found`
                                     : 'No expenses found'}
                             </Text>
 
@@ -855,6 +853,12 @@ const S = StyleSheet.create({
     filterRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
     filterBtn: { flex: 1, paddingVertical: 9, borderRadius: 18, backgroundColor: '#E2E8F0', alignItems: 'center' },
     filterLabel: { fontSize: 12, fontWeight: '700', color: '#64748B' },
+    // New segmented filter
+    filterSegment: { flexDirection: 'row', backgroundColor: '#F1F5F9', borderRadius: 14, padding: 4, marginBottom: 6, gap: 0 },
+    segBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 9, borderRadius: 10, gap: 6 },
+    segLabel: { fontSize: 12, fontWeight: '800', color: '#64748B' },
+    segBadge: { backgroundColor: '#E2E8F0', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 10, minWidth: 20, alignItems: 'center' },
+    segBadgeText: { fontSize: 10, fontWeight: '800', color: '#64748B' },
     listContent: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 150 },
     loaderWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
     loaderText: { fontSize: 14, color: '#94A3B8', fontWeight: '600' },

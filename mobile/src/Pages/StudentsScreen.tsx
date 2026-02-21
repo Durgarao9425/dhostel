@@ -12,7 +12,8 @@ import {
     ActivityIndicator,
     LayoutAnimation,
     Platform,
-    UIManager
+    UIManager,
+    Alert
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
@@ -44,9 +45,10 @@ interface StudentCardProps {
     onPress: (id: number) => void;
     onWhatsApp: (phone: string) => void;
     onCall: (phone: string) => void;
+    onToggle: (student: any) => void;
 }
 
-const StudentCard = React.memo(({ student, onPress, onWhatsApp, onCall }: StudentCardProps) => {
+const StudentCard = React.memo(({ student, onPress, onWhatsApp, onCall, onToggle }: StudentCardProps) => {
     const isActive = student.status === 1;
     return (
         <TouchableOpacity
@@ -85,6 +87,14 @@ const StudentCard = React.memo(({ student, onPress, onWhatsApp, onCall }: Studen
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
                         <Phone size={18} color="#0EA5E9" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={() => onToggle(student)}
+                        style={[styles.statusToggleBtn, { backgroundColor: isActive ? '#FEE2E2' : '#DCFCE7' }]}
+                    >
+                        <Text style={[styles.statusToggleText, { color: isActive ? '#EF4444' : '#10B981' }]}>
+                            {isActive ? 'OFF' : 'ON'}
+                        </Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -289,6 +299,38 @@ export const StudentsScreen = ({ navigation }: any) => {
         Linking.openURL(`whatsapp://send?phone=91${phone}`);
     }, []);
 
+    const handleToggleStatus = useCallback((student: any) => {
+        const isCurrentlyActive = student.status === 1;
+        const newStatusLabel = isCurrentlyActive ? 'Inactive' : 'Active';
+        Alert.alert(
+            `Mark as ${newStatusLabel}?`,
+            `Are you sure you want to mark ${student.first_name} as ${newStatusLabel.toLowerCase()}?`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Yes',
+                    onPress: async () => {
+                        try {
+                            const res = await api.put(`/students/${student.student_id}`, {
+                                status: isCurrentlyActive ? 0 : 1
+                            });
+                            if (res.data.success) {
+                                // Update local state for immediate feedback
+                                setAllStudents(prev => prev.map(s =>
+                                    s.student_id === student.student_id ? { ...s, status: isCurrentlyActive ? 0 : 1 } : s
+                                ));
+                                fetchCounts(); // Update tab counts
+                                Toast.show({ type: 'success', text1: 'Status Updated' });
+                            }
+                        } catch (e: any) {
+                            Alert.alert('Error', e.response?.data?.error || 'Failed to update status');
+                        }
+                    }
+                }
+            ]
+        );
+    }, []);
+
     const handleCall = useCallback((phone: string) => {
         Linking.openURL(`tel:${phone}`);
     }, []);
@@ -299,8 +341,9 @@ export const StudentsScreen = ({ navigation }: any) => {
             onPress={handleNavigate}
             onWhatsApp={handleWhatsApp}
             onCall={handleCall}
+            onToggle={handleToggleStatus}
         />
-    ), [handleNavigate, handleWhatsApp, handleCall]);
+    ), [handleNavigate, handleWhatsApp, handleCall, handleToggleStatus]);
 
     const keyExtractor = useCallback((item: any) => item.student_id.toString(), []);
 
@@ -508,6 +551,11 @@ const styles = StyleSheet.create({
         justifyContent: 'center', alignItems: 'center',
         borderWidth: 1, borderColor: '#F1F5F9'
     },
+    statusToggleBtn: {
+        width: 38, height: 38, borderRadius: 12,
+        justifyContent: 'center', alignItems: 'center',
+    },
+    statusToggleText: { fontSize: 10, fontWeight: '900' },
     fab: {
         position: 'absolute', bottom: 130, right: 20,
         width: 60, height: 60, borderRadius: 30,

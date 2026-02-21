@@ -12,7 +12,8 @@ import {
     TextInput,
     Alert,
     StatusBar,
-    InteractionManager
+    InteractionManager,
+    Switch
 } from 'react-native';
 import { Card } from '../components/Card';
 import { Badge } from '../components/Badge';
@@ -214,6 +215,48 @@ const StudentDetailsScreen = ({ route, navigation }: any) => {
         setPayModalVisible(true);
     }, [student, outstandingBalance, fetchPaymentModes]);
 
+    // ── Toggle Active / Inactive status ────────────────────────────────────
+    const [statusLoading, setStatusLoading] = useState(false);
+
+    const handleToggleStatus = useCallback(() => {
+        if (!student) return;
+        const isCurrentlyActive = student.status === 1;
+        const newStatusLabel = isCurrentlyActive ? 'Inactive' : 'Active';
+        Alert.alert(
+            `Mark as ${newStatusLabel}?`,
+            isCurrentlyActive
+                ? 'This student will be marked as inactive and won\'t appear in active lists.'
+                : 'This student will be marked as active again.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: `Yes, mark ${newStatusLabel}`,
+                    style: isCurrentlyActive ? 'destructive' : 'default',
+                    onPress: async () => {
+                        try {
+                            setStatusLoading(true);
+                            const res = await api.put(`/students/${student.student_id}`, {
+                                status: isCurrentlyActive ? 0 : 1
+                            });
+                            if (res.data.success) {
+                                setStudent((prev: any) => ({ ...prev, status: isCurrentlyActive ? 0 : 1 }));
+                                Toast.show({
+                                    type: 'success',
+                                    text1: `Marked as ${newStatusLabel}`,
+                                    text2: `${student.first_name} is now ${newStatusLabel.toLowerCase()}.`
+                                });
+                            }
+                        } catch (e: any) {
+                            Alert.alert('Error', e.response?.data?.error || 'Failed to update status');
+                        } finally {
+                            setStatusLoading(false);
+                        }
+                    }
+                }
+            ]
+        );
+    }, [student]);
+
     // ── Submit payment ─────────────────────────────────────────────────────
     const handleRecordPayment = useCallback(async () => {
         if (!payAmount || isNaN(parseFloat(payAmount))) {
@@ -351,6 +394,31 @@ const StudentDetailsScreen = ({ route, navigation }: any) => {
                                         style={styles.badge}
                                     />
                                 </View>
+                            </View>
+
+                            {/* ── Active / Inactive Toggle ── */}
+                            <View style={styles.statusToggleRow}>
+                                <View style={styles.statusToggleLeft}>
+                                    <View style={[styles.statusIndicator, { backgroundColor: student.status === 1 ? '#DCFCE7' : '#FEE2E2' }]}>
+                                        <Text style={[styles.statusIndicatorText, { color: student.status === 1 ? '#16A34A' : '#DC2626' }]}>
+                                            {student.status === 1 ? '● Active' : '● Inactive'}
+                                        </Text>
+                                    </View>
+                                    <Text style={styles.statusToggleHint}>Tap to change status</Text>
+                                </View>
+                                {statusLoading ? (
+                                    <ActivityIndicator size="small" color="#FF6B6B" />
+                                ) : (
+                                    <TouchableOpacity
+                                        style={[styles.statusToggleBtn, { backgroundColor: student.status === 1 ? '#FEE2E2' : '#DCFCE7' }]}
+                                        onPress={handleToggleStatus}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Text style={[styles.statusToggleBtnText, { color: student.status === 1 ? '#DC2626' : '#16A34A' }]}>
+                                            {student.status === 1 ? 'Mark Inactive' : 'Mark Active'}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
                             </View>
                         </Card>
 
@@ -637,7 +705,14 @@ const styles = StyleSheet.create({
     content: { flex: 1 },
     scrollContent: { padding: 20, paddingBottom: 100 },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' },
-    profileCard: { marginBottom: 24, padding: 20 },
+    profileCard: { marginBottom: 24, padding: 20, paddingBottom: 16 },
+    statusToggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
+    statusToggleLeft: { flex: 1 },
+    statusIndicator: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, marginBottom: 4 },
+    statusIndicatorText: { fontSize: 13, fontWeight: '700' },
+    statusToggleHint: { fontSize: 11, color: '#94A3B8', fontWeight: '500' },
+    statusToggleBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
+    statusToggleBtnText: { fontSize: 13, fontWeight: '700' },
     profileSection: { flexDirection: 'row', alignItems: 'center' },
     avatar: { width: 80, height: 80, borderRadius: 40, marginRight: 16 },
     avatarPlaceholder: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center', marginRight: 16, borderWidth: 2, borderColor: '#E2E8F0' },
