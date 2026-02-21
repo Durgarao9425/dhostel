@@ -15,7 +15,8 @@ import {
   getAvailableMonths,
   updatePayment,
   deletePayment,
-  getCollections
+  getCollections,
+  getPaymentModes // Add this import
 } from '../controllers/monthlyFeeController.js';
 
 const router = express.Router();
@@ -31,6 +32,9 @@ router.get('/collections', getCollections);
 
 // Get summary for current month (all students)
 router.get('/summary', getMonthlyFeesSummary);
+
+// Get payment modes
+router.get('/payment-modes', getPaymentModes);
 
 // Diagnostic endpoint to check carry_forward calculation
 router.get('/diagnose', diagnoseCarryForward);
@@ -48,6 +52,7 @@ router.get('/student/:studentId/payments', getStudentAllPayments);
 router.get('/student/:studentId/previous', getPreviousMonthsFees);
 
 // Record a payment for a monthly fee
+router.post('/record-payment', recordPayment); // Missing generic route
 router.post('/:feeId/payment', recordPayment);
 
 // Update a payment record

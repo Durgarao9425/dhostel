@@ -2167,3 +2167,23 @@ export const getCollections = async (req: AuthRequest, res: Response) => {
     });
   }
 };
+
+// Get payment modes
+export const getPaymentModes = async (req: AuthRequest, res: Response) => {
+  try {
+    const paymentModes = await db('payment_modes')
+      .select('*')
+      .orderBy('payment_mode_name', 'asc');
+
+    res.json({
+      success: true,
+      data: paymentModes
+    });
+  } catch (error) {
+    console.error('Get payment modes error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch payment modes'
+    });
+  }
+};

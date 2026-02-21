@@ -65,6 +65,7 @@ app.use('/api/rooms', roomRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/fees', feeRoutes);
 app.use('/api/monthly-fees', monthlyFeeRoutes);
+app.use('/api/month-fees', monthlyFeeRoutes); // Alias for common typo
 app.use('/api/income', incomeRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/analytics', reportRoutes); // Keep this as well for mobile compatibility
