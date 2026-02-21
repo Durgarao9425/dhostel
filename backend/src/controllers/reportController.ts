@@ -137,11 +137,17 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
     }
     const pendingDues = await pendingDuesQuery.first();
 
+    console.log('[DEBUG] Dashboard Stats Request for user:', user?.user_id, 'Role:', user?.role_id);
+    console.log('[DEBUG] totalRooms:', totalRooms?.count);
+    console.log('[DEBUG] totalStudents:', totalStudents?.count);
+    console.log('[DEBUG] totalBedsRaw:', bedsData?.total_beds);
+    console.log('[DEBUG] occupiedBeds:', occupiedBeds);
+
     res.json({
       success: true,
       data: {
-        totalRooms: totalRooms?.count || 0,
-        totalStudents: totalStudents?.count || 0,
+        totalRooms: Number(totalRooms?.count || 0),
+        totalStudents: Number(totalStudents?.count || 0),
         occupancyRate: Number(occupancyRate),
         totalBeds: Number(totalBeds),
         occupiedBeds: Number(occupiedBeds),
@@ -150,7 +156,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
         netProfit: Number(netProfit),
         feeCollection: Number(feeCollection?.total || 0),
         feeCollectionCount: Number(feeCollection?.count || 0),
-        pendingDuesCount: pendingDues?.count || 0,
+        pendingDuesCount: Number(pendingDues?.count || 0),
         pendingDuesAmount: Number(pendingDues?.total || 0)
       }
     });

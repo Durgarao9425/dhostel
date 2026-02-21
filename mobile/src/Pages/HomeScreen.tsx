@@ -32,10 +32,10 @@ export default function HomeScreen() {
 
     const load = useCallback(async () => {
         try {
-            const [statsRes, todayRes, summaryRes] = await Promise.all([
-                api.get('/reports/dashboard-stats'),
-                api.get('/income/analytics?type=day'),
-                api.get('/monthly-fees/summary')
+            const [statsRes, todayRes, summaryRes]: any = await Promise.all([
+                api.get('/reports/dashboard-stats').catch(e => { console.log('Stats error:', e.message, e.response?.status); return { data: { success: false } }; }),
+                api.get('/income/analytics?type=day').catch(e => { console.log('Income error:', e.message); return { data: { success: false } }; }),
+                api.get('/monthly-fees/summary').catch(e => { console.log('Summary error:', e.message); return { data: { success: false } }; })
             ]);
 
             if (statsRes.data.success) {

@@ -3,7 +3,6 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes.js';
-import reportsRoutes from './routes/reports.routes.js';
 import hostelRoutes from './routes/hostel.routes.js';
 import userRoutes from './routes/user.routes.js';
 import roomRoutes from './routes/roomRoutes.js';
@@ -58,7 +57,8 @@ app.use('/uploads', express.static('uploads'));
 
 // API Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/reports', reportRoutes); // Point to the new better controller
+app.use('/api/reports', reportRoutes); // High-accuracy report/dashboard logic
+app.use('/api/analytics', reportRoutes); // Keep for mobile mapping
 app.use('/api/hostels', hostelRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/rooms', roomRoutes);
@@ -93,9 +93,10 @@ app.get('/', (req, res) => {
 
 // 404 handler
 app.use((req, res) => {
+  console.log(`[404] No route found for ${req.method} ${req.url}`);
   res.status(404).json({
     success: false,
-    error: 'Route not found',
+    error: `Route not found: ${req.method} ${req.originalUrl}`,
   });
 });
 

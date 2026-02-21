@@ -526,7 +526,11 @@ export default function FinanceScreen() {
             }
         } catch (e: any) {
             console.error('Collect error:', e);
-            Alert.alert('Error', e.response?.data?.error || 'Payment failed.');
+            if (e.response) {
+                console.error('Collect error data:', e.response.data);
+                console.error('Collect error status:', e.response.status);
+            }
+            Alert.alert('Error', e.response?.data?.error || e.message || 'Payment failed.');
         } finally {
             setPayLoading(false);
         }
