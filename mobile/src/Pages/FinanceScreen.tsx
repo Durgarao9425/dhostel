@@ -174,28 +174,24 @@ const ExpenseCard = React.memo(({ item, onPress }: { item: any; onPress: (i: any
     const amt = sf(item.amount);
 
     return (
-        <TouchableOpacity style={C.expCard} activeOpacity={0.88} onPress={() => onPress(item)}>
-            <View style={[C.expTopBar, { backgroundColor: color }]} />
-            <View style={C.expCardBody}>
-                <View style={C.expTopRow}>
-                    <View style={[C.expDateBadge, { backgroundColor: color + '15', borderColor: color + '30' }]}>
-                        <Text style={[C.expDay, { color }]}>{day}</Text>
-                        <Text style={[C.expMonth, { color }]}>{month}</Text>
+        <TouchableOpacity style={C.expCard} activeOpacity={0.9} onPress={() => onPress(item)}>
+            <View style={C.expCardInner}>
+                <View style={C.expLeft}>
+                    <View style={[C.expIconBg, { backgroundColor: color + '15' }]}>
+                        <Tag size={20} color={color} />
                     </View>
-                    <View style={C.expAmountBlock}>
-                        <Text style={C.expAmountLabel}>AMOUNT</Text>
-                        <Text style={C.expAmountVal}>₹{amt.toLocaleString('en-IN')}</Text>
+                    <View style={C.expInfo}>
+                        <Text style={C.expTitle} numberOfLines={1}>{item.title}</Text>
+                        <View style={C.expMeta}>
+                            <Text style={C.expDateText}>{day} {month}</Text>
+                            <View style={C.dot} />
+                            <Text style={[C.expCatName, { color }]}>{item.category_name || 'Other'}</Text>
+                        </View>
                     </View>
                 </View>
-                <Text style={C.expTitle} numberOfLines={1}>{item.title}</Text>
-                <View style={C.expBottomRow}>
-                    <View style={[C.expCatChip, { backgroundColor: color + '15' }]}>
-                        <View style={[C.expCatDot, { backgroundColor: color }]} />
-                        <Text style={[C.expCatText, { color }]}>{item.category_name || 'Other'}</Text>
-                    </View>
-                    <View style={C.expArrow}>
-                        <ChevronRight size={14} color={color} />
-                    </View>
+                <View style={C.expRight}>
+                    <Text style={C.expAmountText}>₹{amt.toLocaleString('en-IN')}</Text>
+                    <ChevronRight size={16} color="#94A3B8" />
                 </View>
             </View>
         </TouchableOpacity>
@@ -797,21 +793,18 @@ const C = StyleSheet.create({
     collectBtnText: { color: '#FFF', fontWeight: '900', fontSize: 11, letterSpacing: 0.4 },
 
     // Expense card
-    expCard: { backgroundColor: '#FFF', borderRadius: 18, marginBottom: 10, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, overflow: 'hidden' },
-    expTopBar: { height: 4 },
-    expCardBody: { padding: 14 },
-    expTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-    expDateBadge: { alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1 },
-    expDay: { fontSize: 20, fontWeight: '900', lineHeight: 22 },
-    expMonth: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5, marginTop: 1 },
-    expAmountBlock: { alignItems: 'flex-end' },
-    expAmountLabel: { fontSize: 9, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.5, marginBottom: 2 },
-    expAmountVal: { fontSize: 22, fontWeight: '900', color: '#EF4444' },
-    expTitle: { fontSize: 14, fontWeight: '700', color: '#1E293B', marginBottom: 10 },
-    expBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    expCatChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8 },
-    expCatDot: { width: 6, height: 6, borderRadius: 3 },
-    expCatText: { fontSize: 10, fontWeight: '700' },
+    expCard: { backgroundColor: '#FFF', borderRadius: 20, marginBottom: 12, elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10 },
+    expCardInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
+    expLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+    expIconBg: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+    expInfo: { flex: 1 },
+    expTitle: { fontSize: 16, fontWeight: '800', color: '#1E293B', marginBottom: 4 },
+    expMeta: { flexDirection: 'row', alignItems: 'center' },
+    expDateText: { fontSize: 12, color: '#94A3B8', fontWeight: '600' },
+    dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#CBD5E1', marginHorizontal: 8 },
+    expCatName: { fontSize: 12, fontWeight: '700' },
+    expRight: { alignItems: 'flex-end', marginLeft: 12 },
+    expAmountText: { fontSize: 18, fontWeight: '900', color: '#EF4444', marginBottom: 2 },
     expArrow: { width: 26, height: 26, borderRadius: 8, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center' },
 
     // Nav

@@ -167,13 +167,12 @@ export const getRoomById = async (req: AuthRequest, res: Response) => {
 
     // Calculate available_beds from students table
     // Count active students with this room_id
-    const studentCount = await db('students')
+    const students = await db('students')
       .where('room_id', roomId)
       .where('status', 1)
-      .count('* as count')
-      .first();
+      .select('student_id', 'first_name', 'last_name', 'phone', 'photo');
 
-    const occupiedCount = studentCount?.count ? parseInt(studentCount.count as any) : (room.occupied_beds || 0);
+    const occupiedCount = students.length;
 
     // Get total capacity: Prioritize DB column, fall back to calculation
     const totalCapacity = (room.capacity && room.capacity > 0)
@@ -191,7 +190,8 @@ export const getRoomById = async (req: AuthRequest, res: Response) => {
       available_beds: availableBeds,
       occupied_beds: occupiedCount,
       capacity: totalCapacity,
-      total_capacity: totalCapacity
+      total_capacity: totalCapacity,
+      occupants: students
     };
 
     res.json({

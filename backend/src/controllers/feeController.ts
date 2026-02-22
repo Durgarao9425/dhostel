@@ -185,6 +185,7 @@ export const recordPayment = async (req: AuthRequest, res: Response) => {
         student_id,
         hostel_id,
         fee_month: currentMonth,
+        fee_date: now.getMonth() + 1,
         monthly_rent: monthlyRent,
         carry_forward: 0,
         total_due: monthlyRent,

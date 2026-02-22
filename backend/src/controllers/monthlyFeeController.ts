@@ -931,6 +931,7 @@ export const recordPayment = async (req: AuthRequest, res: Response) => {
             student_id,
             hostel_id,
             fee_month: feeMonth,
+            fee_date: parseInt(month),
             monthly_rent: monthlyRent,
             carry_forward: carryForward,
             total_due: totalDue,
@@ -989,6 +990,7 @@ export const recordPayment = async (req: AuthRequest, res: Response) => {
         }
       }
 
+      const actualReceiptNumber = receipt_number || `RCP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
       const paymentData: any = {
         fee_id: actualFeeId,
         student_id,
@@ -998,7 +1000,7 @@ export const recordPayment = async (req: AuthRequest, res: Response) => {
         due_date: dueDateStr,
         payment_mode_id: payment_mode_id || null,
         transaction_id: transaction_id || null,
-        receipt_number: receipt_number || null,
+        receipt_number: actualReceiptNumber,
         notes: notes || null,
         created_at: new Date(),
         updated_at: new Date()
@@ -1089,6 +1091,7 @@ export const recordPayment = async (req: AuthRequest, res: Response) => {
             student_id,
             hostel_id,
             fee_month: nextFeeMonth,
+            fee_date: nextMonthNum + 1,
             monthly_rent: nextMonthlyRent,
             carry_forward: nextCarryForward,
             total_due: nextTotalDue,

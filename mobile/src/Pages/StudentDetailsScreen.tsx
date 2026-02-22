@@ -20,7 +20,7 @@ import { Badge } from '../components/Badge';
 import {
     Phone, Mail, MapPin, Calendar, CreditCard,
     ChevronRight, User, Circle, IndianRupee, Clock,
-    CheckCircle, X, Edit, ArrowLeft, Users
+    CheckCircle, X, Edit, ArrowLeft, Users, Receipt
 } from 'lucide-react-native';
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import api from '../services/api';
@@ -50,36 +50,40 @@ const DetailItem = React.memo(({ icon, label, value, onPress }: any) => (
 ));
 
 // ─── Sub-component: a single payment history row ──────────────────────────────
-const PaymentHistoryItem = React.memo(({ payment }: { payment: any }) => (
-    <Card style={styles.historyCard}>
-        <View style={styles.historyRow}>
-            <View style={styles.historyLeft}>
-                <View style={styles.historyIcon}>
-                    <IndianRupee size={18} color="#4CAF50" />
+const PaymentHistoryItem = React.memo(({ payment, student, onPress }: { payment: any; student: any; onPress: (p: any) => void }) => (
+    <TouchableOpacity activeOpacity={0.8} onPress={() => onPress(payment)}>
+        <Card style={styles.historyCard}>
+            <View style={styles.historyRow}>
+                <View style={styles.historyLeft}>
+                    <View style={styles.historyIcon}>
+                        <IndianRupee size={18} color="#4CAF50" />
+                    </View>
+                    <View>
+                        <Text style={styles.historyTitle}>{payment.fee_month || 'Payment'}</Text>
+                        <Text style={styles.historyDate}>
+                            {new Date(payment.payment_date).toLocaleDateString()}
+                        </Text>
+                        <View style={styles.historyMetaRow}>
+                            <Text style={styles.historySubText}>
+                                {payment.payment_mode_name || 'Mode: N/A'}
+                            </Text>
+                            <View style={styles.dot} />
+                            <Text style={styles.historySubText}>
+                                {payment.receipt_number ? `RCP: ${payment.receipt_number}` : 'No Receipt'}
+                            </Text>
+                        </View>
+                    </View>
                 </View>
-                <View>
-                    <Text style={styles.historyTitle}>{payment.fee_month || 'Payment'}</Text>
-                    <Text style={styles.historyDate}>
-                        {new Date(payment.payment_date).toLocaleDateString()}
-                    </Text>
-                    <Text style={styles.historySubText}>
-                        {payment.payment_mode_name || 'Mode: N/A'} •{' '}
-                        {payment.receipt_number ? `R: ${payment.receipt_number}` : 'No Receipt'}
-                    </Text>
-                    {payment.transaction_id && (
-                        <Text style={styles.historySubText}>TXN: {payment.transaction_id}</Text>
-                    )}
+                <View style={styles.historyRight}>
+                    <Text style={styles.historyAmount}>₹{payment.amount}</Text>
+                    <View style={styles.receiptAction}>
+                        <Receipt size={14} color="#FF6B6B" />
+                        <Text style={styles.receiptActionText}>Receipt</Text>
+                    </View>
                 </View>
             </View>
-            <View style={styles.historyRight}>
-                <Text style={styles.historyAmount}>₹{payment.amount}</Text>
-                <Text style={styles.historyStatus}>{payment.status || 'Paid'}</Text>
-                {payment.notes && (
-                    <Text style={styles.historyNotes} numberOfLines={1}>{payment.notes}</Text>
-                )}
-            </View>
-        </View>
-    </Card>
+        </Card>
+    </TouchableOpacity>
 ));
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
@@ -300,7 +304,8 @@ const StudentDetailsScreen = ({ route, navigation }: any) => {
                 setPayNotes('');
                 setPayTransactionId('');
                 setPayReceiptNumber('');
-                // Refresh student data
+
+                // Refresh student data silently in background
                 fetchStudentDetails();
             }
         } catch (error: any) {
@@ -374,25 +379,15 @@ const StudentDetailsScreen = ({ route, navigation }: any) => {
                                     </View>
                                 )}
                                 <View style={styles.profileInfo}>
-                                    <View style={styles.nameRow}>
-                                        <Text style={styles.name}>{student.first_name} {student.last_name}</Text>
-                                        <View style={[
-                                            styles.statusDot,
-                                            student.status === 1 ? styles.activeDot : styles.inactiveDot
-                                        ]}>
-                                            <Circle
-                                                size={8}
-                                                color="#FFF"
-                                                fill={student.status === 1 ? '#10B981' : '#EF4444'}
-                                            />
-                                        </View>
-                                    </View>
+                                    <Text style={styles.name}>{student.first_name} {student.last_name}</Text>
                                     <Text style={styles.roomInfo}>Room {student.room_number || 'Not Assigned'}</Text>
-                                    <Badge
-                                        label={student.status === 1 ? 'Active' : 'Inactive'}
-                                        variant={student.status === 1 ? 'success' : 'error'}
-                                        style={styles.badge}
-                                    />
+                                    <View style={styles.badgeRow}>
+                                        <Badge
+                                            label={outstandingBalance > 0 ? 'Payment Pending' : 'Paid'}
+                                            variant={outstandingBalance > 0 ? 'error' : 'success'}
+                                            style={styles.badge}
+                                        />
+                                    </View>
                                 </View>
                             </View>
 
@@ -431,9 +426,11 @@ const StudentDetailsScreen = ({ route, navigation }: any) => {
                                         ₹{outstandingBalance}
                                     </Text>
                                 </View>
-                                <TouchableOpacity style={styles.payButton} onPress={openPayModal}>
-                                    <Text style={styles.payButtonText}>Pay Now</Text>
-                                </TouchableOpacity>
+                                {outstandingBalance > 0 && (
+                                    <TouchableOpacity style={styles.payButton} onPress={openPayModal}>
+                                        <Text style={styles.payButtonText}>Pay Now</Text>
+                                    </TouchableOpacity>
+                                )}
                             </View>
                         </Card>
 
@@ -541,6 +538,18 @@ const StudentDetailsScreen = ({ route, navigation }: any) => {
                                 <PaymentHistoryItem
                                     key={`${payment.payment_id || 'pay'}-${index}`}
                                     payment={payment}
+                                    student={student}
+                                    onPress={(pay) => navigation.navigate('Receipt', {
+                                        feeData: {
+                                            ...pay,
+                                            first_name: student.first_name,
+                                            last_name: student.last_name,
+                                            phone: student.phone,
+                                            room_number: student.room_number,
+                                            paid_amount: pay.amount,
+                                            fee_id: pay.payment_id || pay.id
+                                        }
+                                    })}
                                 />
                             ))
                         ) : (
@@ -724,6 +733,7 @@ const styles = StyleSheet.create({
     inactiveDot: { backgroundColor: '#EF4444' },
     roomInfo: { fontSize: 15, color: '#64748B', marginBottom: 8, fontWeight: '500' },
     badge: { marginTop: 4, alignSelf: 'flex-start' },
+    badgeRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
     sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1E293B', marginBottom: 12, marginTop: 8 },
     infoCard: { marginBottom: 20, padding: 0 },
     detailItem: { flexDirection: 'row', alignItems: 'center', padding: 16 },
@@ -738,10 +748,13 @@ const styles = StyleSheet.create({
     historyIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#E8F5E9', alignItems: 'center', justifyContent: 'center' },
     historyTitle: { fontSize: 14, fontWeight: '700', color: '#1E293B' },
     historyDate: { fontSize: 12, color: '#94A3B8' },
+    historyMetaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+    dot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#CBD5E1', marginHorizontal: 6 },
     historyRight: { alignItems: 'flex-end' },
     historyAmount: { fontSize: 15, fontWeight: '700', color: '#1E293B' },
-    historyStatus: { fontSize: 11, fontWeight: '600', color: '#10B981' },
-    historySubText: { fontSize: 11, color: '#64748B', marginTop: 2 },
+    receiptAction: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4, backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+    receiptActionText: { fontSize: 10, fontWeight: '700', color: '#EF4444' },
+    historySubText: { fontSize: 11, color: '#64748B' },
     historyNotes: { fontSize: 11, color: '#94A3B8', marginTop: 4, fontStyle: 'italic' },
     emptyHistoryCard: { padding: 30, alignItems: 'center', justifyContent: 'center', gap: 8 },
     emptyHistoryText: { fontSize: 14, color: '#94A3B8', fontWeight: '500' },

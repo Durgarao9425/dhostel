@@ -200,6 +200,7 @@ const generateMonthlyFeesForHostel = async (hostel_id: number, fee_month: string
           student_id: student.student_id,
           hostel_id: student.hostel_id,
           fee_month: fee_month,
+          fee_date: parseInt(month),
           monthly_rent: monthlyRent,
           carry_forward: carryForward,
           total_due: totalDue,

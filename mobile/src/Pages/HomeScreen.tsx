@@ -40,23 +40,26 @@ export default function HomeScreen() {
 
             if (statsRes.data.success) {
                 const d = statsRes.data.data;
-                const todayData = todayRes.data.success ? todayRes.data.data : {};
+                const todayRent = d.todayRent || 0;
 
                 // Process Top 5 Defaulters
                 let topDefaulters: any[] = [];
                 if (summaryRes.data.success && summaryRes.data.data?.fees) {
                     const fees = summaryRes.data.data.fees;
+                    const now = new Date();
+                    now.setHours(0, 0, 0, 0);
+
                     topDefaulters = fees
-                        .filter((f: any) => (f.balance || 0) > 0)
+                        .filter((f: any) => (f.balance || 0) > 0 && (f.fee_status || '').toLowerCase() !== 'paid' && (f.fee_status || '').toLowerCase() !== 'fully paid')
                         .sort((a: any, b: any) => (b.balance || 0) - (a.balance || 0))
                         .slice(0, 5)
                         .map((f: any) => {
-                            const now = new Date();
-                            // If due_date is null, assume strict logic: due immediately or default to safe date
                             // Using current date as fallback means not overdue unless strictly > today
                             const due = f.due_date ? new Date(f.due_date) : new Date();
+                            due.setHours(0, 0, 0, 0);
+
                             const diffTime = now.getTime() - due.getTime();
-                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
                             const isOverdue = diffDays > 0;
 
                             return {
@@ -78,7 +81,7 @@ export default function HomeScreen() {
                     occupiedBeds: d.occupiedBeds || 0,
                     totalBeds: d.totalBeds || 0,
                     availableBeds: (d.totalBeds || 0) - (d.occupiedBeds || 0),
-                    todayAmount: todayData.total_income || 0,
+                    todayAmount: todayRent,
                     unpaidStudents: topDefaulters
                 });
             }

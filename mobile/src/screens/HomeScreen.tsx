@@ -38,28 +38,21 @@ export default function HomeScreen({ navigation }: any) {
 
     const fetchDashboardData = useCallback(async () => {
         try {
-            const [studentsRes, roomsRes, feesRes] = await Promise.allSettled([
-                api.get('/students'),
-                api.get('/rooms'),
-                api.get('/monthly-fees'),
-            ]);
-
-            const students = studentsRes.status === 'fulfilled' ? studentsRes.value.data?.data || [] : [];
-            const rooms = roomsRes.status === 'fulfilled' ? roomsRes.value.data?.data || [] : [];
-            const fees = feesRes.status === 'fulfilled' ? feesRes.value.data?.data || [] : [];
-
-            const activeStudents = Array.isArray(students) ? students.filter((s: any) => s.status === 'active') : [];
-            const availableRooms = Array.isArray(rooms) ? rooms.filter((r: any) => r.status === 'available') : [];
-            const pendingFees = Array.isArray(fees) ? fees.filter((f: any) => f.status === 'unpaid' || f.status === 'partial') : [];
-
-            setStats({
-                totalStudents: activeStudents.length,
-                totalRooms: Array.isArray(rooms) ? rooms.length : 0,
-                availableRooms: availableRooms.length,
-                monthlyRevenue: 0,
-                pendingFees: pendingFees.length,
-                dueSoon: [],
-            });
+            const response = await api.get('/analytics/dashboard-stats');
+            if (response.data.success) {
+                const d = response.data.data;
+                setStats({
+                    totalStudents: d.totalStudents,
+                    totalRooms: d.totalRooms,
+                    availableRooms: d.totalBeds - d.occupiedBeds,
+                    monthlyRevenue: d.monthlyIncome,
+                    pendingFees: d.pendingDuesCount,
+                    dueSoon: [],
+                    // Extending interface locally or just using the variables
+                    todayRent: d.todayRent,
+                    todaySplit: d.todaySplit,
+                } as any);
+            }
         } catch (error) {
             console.error('Dashboard fetch error:', error);
         } finally {
@@ -106,18 +99,43 @@ export default function HomeScreen({ navigation }: any) {
             </LinearGradient>
 
             <View style={styles.content}>
+                {/* Today's Highlight */}
+                <View style={styles.todayCard}>
+                    <LinearGradient colors={['#3B82F6', '#2563EB']} style={styles.todayGradient}>
+                        <View style={styles.todayMain}>
+                            <View>
+                                <Text style={styles.todayLabel}>TODAY'S RENT</Text>
+                                <Text style={styles.todayValue}>₹{(stats as any).todayRent || 0}</Text>
+                            </View>
+                            <View style={styles.todayIconCircle}>
+                                <Text style={{ fontSize: 24 }}>💰</Text>
+                            </View>
+                        </View>
+                        {(stats as any).todaySplit?.length > 0 && (
+                            <View style={styles.todayBreakdown}>
+                                {(stats as any).todaySplit.map((s: any, i: number) => (
+                                    <View key={i} style={styles.breakdownItem}>
+                                        <Text style={styles.breakdownMode}>{s.mode}</Text>
+                                        <Text style={styles.breakdownAmt}>₹{s.total}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
+                    </LinearGradient>
+                </View>
+
                 {/* Stats Grid */}
                 <Text style={styles.sectionTitle}>Overview</Text>
                 <View style={styles.statsGrid}>
-                    <View style={[styles.statCard, { borderLeftColor: '#3B82F6' }]}>
+                    <View style={[styles.statCard, { borderLeftColor: '#10B981' }]}>
                         <Text style={styles.statIcon}>👥</Text>
                         <Text style={styles.statValue}>{stats.totalStudents}</Text>
                         <Text style={styles.statLabel}>Active Students</Text>
                     </View>
-                    <View style={[styles.statCard, { borderLeftColor: '#10B981' }]}>
+                    <View style={[styles.statCard, { borderLeftColor: '#3B82F6' }]}>
                         <Text style={styles.statIcon}>🛏️</Text>
                         <Text style={styles.statValue}>{stats.availableRooms}</Text>
-                        <Text style={styles.statLabel}>Available Rooms</Text>
+                        <Text style={styles.statLabel}>Beds Available</Text>
                     </View>
                     <View style={[styles.statCard, { borderLeftColor: '#F59E0B' }]}>
                         <Text style={styles.statIcon}>⚠️</Text>
@@ -125,9 +143,9 @@ export default function HomeScreen({ navigation }: any) {
                         <Text style={styles.statLabel}>Pending Fees</Text>
                     </View>
                     <View style={[styles.statCard, { borderLeftColor: '#8B5CF6' }]}>
-                        <Text style={styles.statIcon}>🏠</Text>
-                        <Text style={styles.statValue}>{stats.totalRooms}</Text>
-                        <Text style={styles.statLabel}>Total Rooms</Text>
+                        <Text style={styles.statIcon}>📈</Text>
+                        <Text style={styles.statValue}>₹{stats.monthlyRevenue}</Text>
+                        <Text style={styles.statLabel}>Monthly Income</Text>
                     </View>
                 </View>
 
@@ -178,5 +196,72 @@ const styles = StyleSheet.create({
     },
     actionIcon: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
     actionEmoji: { fontSize: 26 },
+    todayCard: {
+        marginBottom: 20,
+        borderRadius: 24,
+        overflow: 'hidden',
+        elevation: 8,
+        shadowColor: '#3B82F6',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 12,
+    },
+    todayGradient: {
+        padding: 24,
+    },
+    todayMain: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    todayLabel: {
+        fontSize: 12,
+        fontWeight: '800',
+        color: 'rgba(255,255,255,0.7)',
+        letterSpacing: 1.5,
+    },
+    todayValue: {
+        fontSize: 36,
+        fontWeight: '900',
+        color: '#FFFFFF',
+        marginTop: 4,
+    },
+    todayIconCircle: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    todayBreakdown: {
+        marginTop: 20,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(255,255,255,0.1)',
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 12,
+    },
+    breakdownItem: {
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+    },
+    breakdownMode: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: 'rgba(255,255,255,0.6)',
+        textTransform: 'uppercase',
+    },
+    breakdownAmt: {
+        fontSize: 14,
+        fontWeight: '800',
+        color: '#FFFFFF',
+        marginTop: 2,
+    },
     actionLabel: { fontSize: 14, fontWeight: '600' },
 });

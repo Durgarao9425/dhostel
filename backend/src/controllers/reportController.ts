@@ -137,11 +137,35 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
     }
     const pendingDues = await pendingDuesQuery.first();
 
+    // Get today's rent collection (from fee_payments table)
+    // Get today's rent collection (from fee_payments table)
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    let todayRentQuery = db('fee_payments')
+      .where('payment_date', today)
+      .sum('amount as total')
+      .count('* as count');
+    if (hostelIds.length > 0) {
+      todayRentQuery = todayRentQuery.whereIn('hostel_id', hostelIds);
+    }
+    const todayRent = await todayRentQuery.first();
+
+    // Get today's split by payment mode
+    let todaySplitQuery = db('fee_payments as fp')
+      .leftJoin('payment_modes as pm', 'fp.payment_mode_id', 'pm.payment_mode_id')
+      .where('fp.payment_date', today)
+      .select('pm.payment_mode_name as mode', db.raw('SUM(fp.amount) as total'))
+      .groupBy('pm.payment_mode_name');
+    if (hostelIds.length > 0) {
+      todaySplitQuery = todaySplitQuery.whereIn('fp.hostel_id', hostelIds);
+    }
+    const todaySplit = await todaySplitQuery;
+
     console.log('[DEBUG] Dashboard Stats Request for user:', user?.user_id, 'Role:', user?.role_id);
     console.log('[DEBUG] totalRooms:', totalRooms?.count);
     console.log('[DEBUG] totalStudents:', totalStudents?.count);
     console.log('[DEBUG] totalBedsRaw:', bedsData?.total_beds);
     console.log('[DEBUG] occupiedBeds:', occupiedBeds);
+    console.log('[DEBUG] todayRent:', todayRent?.total);
 
     res.json({
       success: true,
@@ -157,7 +181,10 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
         feeCollection: Number(feeCollection?.total || 0),
         feeCollectionCount: Number(feeCollection?.count || 0),
         pendingDuesCount: Number(pendingDues?.count || 0),
-        pendingDuesAmount: Number(pendingDues?.total || 0)
+        pendingDuesAmount: Number(pendingDues?.total || 0),
+        todayRent: Number(todayRent?.total || 0),
+        todayCount: Number(todayRent?.count || 0),
+        todaySplit: todaySplit.map(s => ({ mode: s.mode, total: Number(s.total) }))
       }
     });
   } catch (error) {
