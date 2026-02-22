@@ -623,7 +623,7 @@ export default function FinanceScreen() {
                         <Text style={S.headerTitle}>Finance Hub</Text>
                     </View>
                     <View style={{ flexDirection: 'row', gap: 10 }}>
-                        <HeaderNotification navigation={navigation} /><ProfileMenu />
+                        <ProfileMenu />
                     </View>
                 </View>
                 <View style={S.tabContainer}>
@@ -719,7 +719,24 @@ export default function FinanceScreen() {
                     showsVerticalScrollIndicator={false}
                     initialNumToRender={10} maxToRenderPerBatch={10} windowSize={7}
                     removeClippedSubviews={Platform.OS === 'android'}
-                    ListHeaderComponent={null}
+                    ListHeaderComponent={
+                        mode === 'Rent' ? (
+                            <View style={S.summaryGrid}>
+                                <View style={[S.sumCard, { borderColor: '#3B82F6' }]}>
+                                    <Text style={[S.sumLabel, { color: '#3B82F6' }]}>TOTAL RENT</Text>
+                                    <Text style={S.sumValue}>₹{summary?.total_due || 0}</Text>
+                                </View>
+                                <View style={[S.sumCard, { borderColor: '#10B981' }]}>
+                                    <Text style={[S.sumLabel, { color: '#10B981' }]}>PAID</Text>
+                                    <Text style={S.sumValue}>₹{summary?.total_paid || 0}</Text>
+                                </View>
+                                <View style={[S.sumCard, { borderColor: '#EF4444' }]}>
+                                    <Text style={[S.sumLabel, { color: '#EF4444' }]}>PENDING</Text>
+                                    <Text style={S.sumValue}>₹{summary?.total_pending || 0}</Text>
+                                </View>
+                            </View>
+                        ) : null
+                    }
                     ListEmptyComponent={
                         <View style={S.emptyWrap}>
                             <Text style={S.emptyEmoji}>
@@ -887,7 +904,12 @@ const S = StyleSheet.create({
     expCatAmt: { fontSize: 11, fontWeight: '800', color: '#FFF' },
 
     // Nav
-    navArrow: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center', elevation: 1 },
     dateBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, elevation: 1 },
     dateBadgeText: { fontSize: 13, fontWeight: '700', color: '#1E293B' },
+
+    // Summary Grid
+    summaryGrid: { flexDirection: 'row', gap: 10, marginBottom: 16 },
+    sumCard: { flex: 1, backgroundColor: '#FFF', borderRadius: 14, padding: 10, borderWidth: 1, alignItems: 'center', elevation: 1 },
+    sumLabel: { fontSize: 9, fontWeight: '800', marginBottom: 4 },
+    sumValue: { fontSize: 15, fontWeight: '900', color: '#1E293B' },
 });

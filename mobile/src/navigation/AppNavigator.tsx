@@ -74,23 +74,23 @@ const TabNavigator = () => {
 
 
 import { useNavigationContainerRef } from '@react-navigation/native';
-import { notificationService } from '../services/notificationService';
+// import { notificationService } from '../services/notificationService';
 
 // ... (other imports)
 
 const AppNavigator = () => {
     const navigationRef = useNavigationContainerRef();
 
-    React.useEffect(() => {
-        // Setup notification listeners
-        const cleanup = notificationService.setupNotificationListeners((screen, params) => {
-            if (navigationRef.isReady()) {
-                // @ts-ignore - Dynamic navigation
-                navigationRef.navigate(screen, params);
-            }
-        });
-        return cleanup;
-    }, [navigationRef]);
+    // React.useEffect(() => {
+    //     // Setup notification listeners
+    //     const cleanup = notificationService.setupNotificationListeners((screen, params) => {
+    //         if (navigationRef.isReady()) {
+    //             // @ts-ignore - Dynamic navigation
+    //             navigationRef.navigate(screen, params);
+    //         }
+    //     });
+    //     return cleanup;
+    // }, [navigationRef]);
 
     return (
         <NavigationContainer ref={navigationRef}>
@@ -112,7 +112,6 @@ const AppNavigator = () => {
                     options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
                 />
                 <Stack.Screen name="PaymentDetails" component={PaymentDetailsScreen} />
-                <Stack.Screen name="Notifications" component={NotificationScreen} />
                 <Stack.Screen name="Profile" component={ProfileScreen} />
                 <Stack.Screen name="Expenses" component={ExpenseScreen} />
                 <Stack.Screen name="AddExpense" component={AddExpenseScreen} />
