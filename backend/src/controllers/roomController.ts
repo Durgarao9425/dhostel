@@ -130,43 +130,50 @@ export const getRooms = async (req: AuthRequest, res: Response) => {
 export const getRoomById = async (req: AuthRequest, res: Response) => {
   try {
     const { roomId } = req.params;
+    console.log('[getRoomById] ID requested:', roomId);
 
     const room = await db('rooms as r')
       .leftJoin('room_types as rt', 'r.room_type_id', 'rt.room_type_id')
       .leftJoin('hostel_master as h', 'r.hostel_id', 'h.hostel_id')
       .select(
-        'r.*',
-        'rt.room_type_name as room_type_name',
+        'r.room_id',
+        'r.hostel_id',
+        'r.room_number',
+        'r.room_type_id',
+        'r.floor_number',
+        'r.capacity',
+        'r.occupied_beds',
+        'r.rent_per_bed',
+        'r.amenities',
+        'r.status',
+        'r.is_available',
+        'rt.room_type_name',
+        'rt.description as room_type_description',
         'h.hostel_name'
       )
       .where('r.room_id', roomId)
       .first();
 
     if (!room) {
-      return res.status(404).json({
-        success: false,
-        error: 'Room not found'
-      });
+      return res.status(404).json({ success: false, error: 'Room not found' });
     }
 
-    // Parse amenities JSON or CSV
+    // Parse amenities
     let amenitiesArray = [];
     if (room.amenities) {
-      try {
-        amenitiesArray = JSON.parse(room.amenities);
-      } catch (e) {
-        amenitiesArray = room.amenities.split(',').map((a: string) => a.trim()).filter(Boolean);
+      if (typeof room.amenities === 'string') {
+        try {
+          amenitiesArray = JSON.parse(room.amenities);
+        } catch (e) {
+          amenitiesArray = room.amenities.split(',').map((a: string) => a.trim()).filter(Boolean);
+        }
+      } else if (Array.isArray(room.amenities)) {
+        amenitiesArray = room.amenities;
       }
     }
 
-    // Get room type details to extract capacity
-    const roomType = await db('room_types')
-      .where({ room_type_id: room.room_type_id })
-      .first();
-
-
-    // Calculate available_beds from students table
-    // Count active students with this room_id
+    // Get occupants
+    console.log('[getRoomById] Fetching occupants for room:', roomId);
     const students = await db('students')
       .where('room_id', roomId)
       .where('status', 1)
@@ -174,35 +181,43 @@ export const getRoomById = async (req: AuthRequest, res: Response) => {
 
     const occupiedCount = students.length;
 
-    // Get total capacity: Prioritize DB column, fall back to calculation
-    const totalCapacity = (room.capacity && room.capacity > 0)
-      ? room.capacity
-      : (roomType
-        ? getCapacityFromRoomTypeName(roomType.room_type_name, roomType.description || null)
-        : (room.room_type_id || 0));
+    // Capacity: use r.capacity first, fall back to room type name, then hardcode 2
+    const rawCap = (room as any).capacity;
+    let totalCapacity = 0;
+    if (rawCap !== undefined && rawCap !== null) {
+      const parsed = parseInt(String(rawCap));
+      if (!isNaN(parsed) && parsed > 0) totalCapacity = parsed;
+    }
+    if (totalCapacity <= 0) {
+      totalCapacity = getCapacityFromRoomTypeName(
+        (room as any).room_type_name || '',
+        (room as any).room_type_description || null
+      );
+    }
+    if (totalCapacity <= 0) totalCapacity = 2; // final fallback
 
-    // Calculate available beds: Total Capacity - Occupied
     const availableBeds = Math.max(0, totalCapacity - occupiedCount);
-
-    const roomWithParsedData = {
-      ...room,
-      amenities: amenitiesArray,
-      available_beds: availableBeds,
-      occupied_beds: occupiedCount,
-      capacity: totalCapacity,
-      total_capacity: totalCapacity,
-      occupants: students
-    };
+    console.log('[getRoomById] Result:', { room: (room as any).room_number, cap: totalCapacity, occ: occupiedCount });
 
     res.json({
       success: true,
-      data: roomWithParsedData
+      data: {
+        ...room,
+        amenities: amenitiesArray,
+        available_beds: availableBeds,
+        occupied_beds: occupiedCount,
+        capacity: totalCapacity,
+        total_capacity: totalCapacity,
+        occupants: students
+      }
     });
-  } catch (error) {
-    console.error('Get room error:', error);
+  } catch (error: any) {
+    console.error('getRoomById Error:', error);
+    console.error('Stack:', error?.stack);
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch room'
+      error: 'Internal Server Error',
+      details: error?.message
     });
   }
 };

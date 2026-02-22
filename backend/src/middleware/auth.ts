@@ -46,3 +46,29 @@ export const isAdmin = (
   }
   next();
 };
+
+export const queryTokenMiddleware = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const token = req.query.token as string;
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        error: 'Access token is required in query params',
+      });
+    }
+
+    const payload = verifyToken(token);
+    req.user = payload;
+    next();
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      error: 'Invalid or expired token',
+    });
+  }
+};

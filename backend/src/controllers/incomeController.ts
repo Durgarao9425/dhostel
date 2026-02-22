@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import db from '../config/database.js';
 import { AuthRequest } from '../middleware/auth.js';
+import ExcelJS from 'exceljs';
 
 // Get all income records
 export const getAllIncome = async (req: AuthRequest, res: Response) => {
@@ -274,5 +275,244 @@ export const getIncomeSummary = async (req: AuthRequest, res: Response) => {
       success: false,
       error: 'Failed to fetch income summary'
     });
+  }
+};
+
+// Get income analytics for breakdown charts
+export const getIncomeAnalytics = async (req: AuthRequest, res: Response) => {
+  try {
+    const { type, date } = req.query; // type: 'day' | 'week' | 'month', date: 'YYYY-MM-DD'
+    const user = req.user;
+    const hostelId = user?.hostel_id;
+
+    if (!date) return res.status(400).json({ success: false, error: 'Date is required' });
+
+    let startDate: string, endDate: string;
+    const refDate = new Date(date as string);
+
+    // Adjust for JS Date being UTC if not careful, but splitting string is safer
+    if (type === 'day') {
+      startDate = date as string;
+      endDate = date as string;
+    } else if (type === 'week') {
+      // Last 7 days
+      endDate = date as string;
+      const d = new Date(refDate);
+      d.setDate(d.getDate() - 6);
+      startDate = d.toISOString().split('T')[0];
+    } else {
+      // Current month
+      const y = refDate.getFullYear();
+      const m = refDate.getMonth();
+      startDate = `${y}-${String(m + 1).padStart(2, '0')}-01`;
+      endDate = new Date(y, m + 1, 0).toISOString().split('T')[0];
+    }
+
+    // 1. Fetch Income records
+    let incomeQuery = db('income as i')
+      .leftJoin('payment_modes as pm', 'i.payment_mode_id', 'pm.payment_mode_id')
+      .whereBetween('i.income_date', [startDate, endDate]);
+
+    if (user?.role_id === 2 && hostelId) {
+      incomeQuery = incomeQuery.where('i.hostel_id', hostelId);
+    }
+    const incomes = await incomeQuery.select('i.*', 'pm.payment_mode_name as payment_mode');
+
+    // 2. Fetch Fee Payment records
+    let feeQuery = db('fee_payments as fp')
+      .leftJoin('students as s', 'fp.student_id', 's.student_id')
+      .leftJoin('payment_modes as pm', 'fp.payment_mode_id', 'pm.payment_mode_id')
+      .whereBetween('fp.payment_date', [startDate, endDate]);
+
+    if (user?.role_id === 2 && hostelId) {
+      feeQuery = feeQuery.where('fp.hostel_id', hostelId);
+    }
+    const feePayments = await feeQuery.select('fp.*', 's.first_name', 's.last_name', 'pm.payment_mode_name as payment_mode');
+
+    // 3. Combine Transactions
+    const transactions = [
+      ...incomes.map(inc => ({
+        id: `inc_${inc.income_id}`,
+        title: inc.source || 'Other Income',
+        subtitle: inc.payment_mode || 'Cash',
+        amount: parseFloat(inc.amount),
+        date: inc.income_date,
+        type: 'Other',
+        description: inc.description
+      })),
+      ...feePayments.map(fp => ({
+        id: `fee_${fp.payment_id}`,
+        title: `${fp.first_name || 'Student'} ${fp.last_name || ''}`,
+        subtitle: `Rent · ${fp.payment_mode || 'Cash'}`,
+        amount: parseFloat(fp.amount),
+        date: fp.payment_date,
+        student_id: fp.student_id,
+        type: 'Rent'
+      }))
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const rentTotal = feePayments.reduce((sum, fp) => sum + parseFloat(fp.amount), 0);
+    const otherTotal = incomes.reduce((sum, inc) => sum + parseFloat(inc.amount), 0);
+    const totalAmount = rentTotal + otherTotal;
+
+    // 4. Graph Data
+    let graph: { label: string; value: number }[] = [];
+    if (type === 'day') {
+      // For display, simulate hourly distribution if timestamps aren't precise
+      graph = [
+        { label: '6am', value: 0 }, { label: '9am', value: totalAmount * 0.15 },
+        { label: '12pm', value: totalAmount * 0.35 }, { label: '3pm', value: totalAmount * 0.25 },
+        { label: '6pm', value: totalAmount * 0.15 }, { label: '9pm', value: totalAmount * 0.10 }
+      ];
+    } else if (type === 'week') {
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(refDate);
+        d.setDate(d.getDate() - i);
+        const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const val = transactions
+          .filter(t => {
+            const tDate = typeof t.date === 'string' ? t.date.split('T')[0] : new Date(t.date).toISOString().split('T')[0];
+            return tDate === ds;
+          })
+          .reduce((s, t) => s + t.amount, 0);
+        graph.push({ label: days[d.getDay()], value: val });
+      }
+    } else {
+      // Month - 4 blocks
+      for (let i = 0; i < 4; i++) {
+        const val = transactions.filter(t => {
+          const day = new Date(t.date).getDate();
+          return day > i * 7 && day <= (i + 1) * 7;
+        }).reduce((s, t) => s + t.amount, 0);
+        graph.push({ label: `Week ${i + 1}`, value: val });
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        total_amount: totalAmount,
+        transactions: transactions.slice(0, 50),
+        breakdown: { rent: rentTotal, other: otherTotal },
+        graph
+      }
+    });
+  } catch (error) {
+    console.error('getIncomeAnalytics Error:', error);
+    res.status(500).json({ success: false, error: 'Internal Server Error' });
+  }
+};
+
+// Export income records to Excel
+export const getIncomeExport = async (req: AuthRequest, res: Response) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const user = req.user;
+    const hostelId = user?.hostel_id;
+
+    // 1. Fetch Income records
+    let incomeQuery = db('income as i')
+      .leftJoin('payment_modes as pm', 'i.payment_mode_id', 'pm.payment_mode_id')
+      .select('i.*', 'pm.payment_mode_name as payment_mode');
+
+    if (user?.role_id === 2 && hostelId) {
+      incomeQuery = incomeQuery.where('i.hostel_id', hostelId);
+    }
+    if (startDate && endDate) {
+      incomeQuery = incomeQuery.whereBetween('i.income_date', [startDate, endDate]);
+    }
+
+    // 2. Fetch Fee Payment records
+    let feeQuery = db('fee_payments as fp')
+      .leftJoin('students as s', 'fp.student_id', 's.student_id')
+      .leftJoin('payment_modes as pm', 'fp.payment_mode_id', 'pm.payment_mode_id')
+      .select('fp.*', 's.first_name', 's.last_name', 'pm.payment_mode_name as payment_mode');
+
+    if (user?.role_id === 2 && hostelId) {
+      feeQuery = feeQuery.where('fp.hostel_id', hostelId);
+    }
+    if (startDate && endDate) {
+      feeQuery = feeQuery.whereBetween('fp.payment_date', [startDate, endDate]);
+    }
+
+    const [incomes, feePayments, expenses] = await Promise.all([
+      incomeQuery,
+      feeQuery,
+      db('expenses as e')
+        .leftJoin('expense_categories as ec', 'e.category_id', 'ec.category_id')
+        .select('e.*', 'ec.category_name')
+        .where(function () {
+          if (user?.role_id === 2 && hostelId) this.where('e.hostel_id', hostelId);
+          if (startDate && endDate) this.whereBetween('e.expense_date', [startDate, endDate]);
+        })
+    ]);
+
+    // Create workbook
+    const workbook = new ExcelJS.Workbook();
+
+    // --- SHEET 1: INCOME ---
+    const worksheet = workbook.addWorksheet('Income');
+    worksheet.columns = [
+      { header: 'Date', key: 'date', width: 15 },
+      { header: 'Source/Student', key: 'title', width: 25 },
+      { header: 'Type', key: 'type', width: 12 },
+      { header: 'Amount', key: 'amount', width: 12 },
+      { header: 'Payment Mode', key: 'mode', width: 15 },
+      { header: 'Details', key: 'details', width: 30 }
+    ];
+
+    incomes.forEach(inc => {
+      worksheet.addRow({
+        date: inc.income_date,
+        title: inc.source || 'Other Income',
+        amount: parseFloat(inc.amount),
+        type: 'Other',
+        mode: inc.payment_mode || 'Cash',
+        details: inc.description || '-'
+      });
+    });
+
+    feePayments.forEach(fp => {
+      worksheet.addRow({
+        date: fp.payment_date,
+        title: `${fp.first_name || 'Student'} ${fp.last_name || ''}`,
+        amount: parseFloat(fp.amount),
+        type: 'Rent',
+        mode: fp.payment_mode || 'Cash',
+        details: `Rent Payment - Student ID: ${fp.student_id}`
+      });
+    });
+    worksheet.getRow(1).font = { bold: true };
+
+    // --- SHEET 2: EXPENSES ---
+    const expSheet = workbook.addWorksheet('Expenses');
+    expSheet.columns = [
+      { header: 'Date', key: 'date', width: 15 },
+      { header: 'Title', key: 'title', width: 25 },
+      { header: 'Category', key: 'category', width: 15 },
+      { header: 'Amount', key: 'amount', width: 12 },
+      { header: 'Description', key: 'details', width: 30 }
+    ];
+
+    expenses.forEach(exp => {
+      expSheet.addRow({
+        date: exp.expense_date,
+        title: exp.title,
+        category: exp.category_name,
+        amount: parseFloat(exp.amount),
+        details: exp.description || '-'
+      });
+    });
+    expSheet.getRow(1).font = { bold: true };
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=report_${startDate || 'all'}.xlsx`);
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error('getIncomeExport Error:', error);
+    res.status(500).json({ success: false, error: 'Failed to export data' });
   }
 };

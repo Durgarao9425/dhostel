@@ -500,6 +500,13 @@ export const getMonthlyFeesSummary = async (req: AuthRequest, res: Response) => 
       query = query.where('s.hostel_id', hostelId);
     }
 
+    // Filter by admission_date: Hide students who haven't joined yet for the selected month.
+    // We compare admission_date with the last day of the selected month.
+    query = query.where(function () {
+      this.where('s.admission_date', '<=', monthEndDate)
+        .orWhereNull('s.admission_date');
+    });
+
     console.log('[getMonthlyFeesSummary] Executing query...');
     const results = await query.orderBy('s.first_name', 'asc');
     console.log(`[getMonthlyFeesSummary] Query completed. Found ${results.length} active students`);
