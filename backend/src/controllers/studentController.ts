@@ -29,19 +29,34 @@ export const getStudents = async (req: AuthRequest, res: Response) => {
         's.admission_date as check_in_date'
       );
 
-    // If user is hostel owner (role_id = 2), filter by their hostel_id from JWT token
+    // If user is hostel owner (role_id = 2), filter by their hostels
     if (user?.role_id === 2) {
-      if (!user.hostel_id) {
-        return res.status(403).json({
-          success: false,
-          error: 'Your account is not linked to any hostel. Please contact administrator.'
-        });
-      }
-      query = query.where('s.hostel_id', user.hostel_id);
-    }
+      if (user.hostel_id) {
+        query = query.where('s.hostel_id', user.hostel_id);
+      } else {
+        const ownerHostels = await db('hostel_master')
+          .where('owner_id', user.user_id)
+          .select('hostel_id');
 
-    // Filter by specific hostel if provided
-    if (hostelId) {
+        const ownerHostelIds = ownerHostels.map(h => h.hostel_id);
+
+        if (ownerHostelIds.length === 0) {
+          return res.status(403).json({
+            success: false,
+            error: 'Your account is not linked to any hostels.'
+          });
+        }
+
+        if (hostelId) {
+          if (!ownerHostelIds.includes(Number(hostelId))) {
+            return res.status(403).json({ success: false, error: 'Access denied.' });
+          }
+          query = query.where('s.hostel_id', hostelId);
+        } else {
+          query = query.whereIn('s.hostel_id', ownerHostelIds);
+        }
+      }
+    } else if (hostelId) {
       query = query.where('s.hostel_id', hostelId);
     }
 
