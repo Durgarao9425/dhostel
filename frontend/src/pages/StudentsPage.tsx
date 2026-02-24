@@ -319,19 +319,19 @@ export const StudentsPage: React.FC = () => {
         api.get("/rooms"),
         api.get("/students")
       ]);
-      
+
       const rooms = roomsResponse.data.data || [];
       const allStudents = studentsResponse.data.data || [];
-      
+
       const totalCapacity = rooms.reduce((sum: number, room: Room) => {
         const capacity = (room.occupied_beds || 0) + (room.available_beds || 0);
         return sum + capacity;
       }, 0);
-      
+
       const totalOccupied = rooms.reduce((sum: number, room: Room) => sum + (room.occupied_beds || 0), 0);
       const totalStudents = allStudents.filter((s: Student) => s.status === 1).length;  // 1 = Active
       const remaining = totalCapacity - totalOccupied;
-      
+
       setHostelStats({
         totalStudents,
         totalCapacity,
@@ -805,6 +805,26 @@ export const StudentsPage: React.FC = () => {
     }
   };
 
+  const handleToggleStatus = async (student: Student) => {
+    const newStatus = student.status === 1 ? 0 : 1;
+    const action = newStatus === 1 ? "activate" : "deactivate";
+
+    if (!window.confirm(`Are you sure you want to ${action} ${student.first_name}?`)) {
+      return;
+    }
+
+    try {
+      await api.put(`/students/${student.student_id}`, {
+        status: newStatus
+      });
+      toast.success(`Student ${action}d successfully`);
+      fetchStudents();
+    } catch (error) {
+      toast.error(`Failed to ${action} student`);
+      console.error(`Toggle status error:`, error);
+    }
+  };
+
   const handleEdit = async (student: Student) => {
     setEditingStudent(student);
 
@@ -940,7 +960,7 @@ export const StudentsPage: React.FC = () => {
             Student Management
           </h1>
         </div>
-        
+
         {/* Right: Search, Status Filter, Add Student */}
         <div className="flex items-center gap-3">
           {/* Search Bar */}
@@ -1088,6 +1108,19 @@ export const StudentsPage: React.FC = () => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+                            handleToggleStatus(student);
+                          }}
+                          className={`p-2 rounded-lg transition-colors ${student.status === 1
+                            ? "bg-red-50 text-red-600 hover:bg-red-100"
+                            : "bg-green-50 text-green-600 hover:bg-green-100"
+                            }`}
+                          title={student.status === 1 ? "Deactivate" : "Activate"}
+                        >
+                          <Users className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setExpandedCardId(null);
                             handleEdit(student);
                           }}
@@ -1140,6 +1173,9 @@ export const StudentsPage: React.FC = () => {
                   Admitted Date
                 </th>
                 <th className="px-3 py-2 text-left text-[10px] font-medium text-white uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-3 py-2 text-left text-[10px] font-medium text-white uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -1190,11 +1226,36 @@ export const StudentsPage: React.FC = () => {
                   <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
                     {formatDateDisplay(student.admission_date)}
                   </td>
+                  <td className="px-3 py-2 whitespace-nowrap text-xs">
+                    {student.status === 1 ? (
+                      <span className="px-2 py-0.5 text-[10px] font-medium text-green-800 bg-green-100 rounded-full">
+                        Active
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 text-[10px] font-medium text-red-800 bg-red-100 rounded-full">
+                        Inactive
+                      </span>
+                    )}
+                  </td>
                   <td
                     className="px-3 py-2 whitespace-nowrap text-xs text-gray-500"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handleToggleStatus(student)}
+                        className={`transition-colors ${student.status === 1
+                          ? "text-red-600 hover:text-red-900"
+                          : "text-green-600 hover:text-green-900"
+                          }`}
+                        title={student.status === 1 ? "Deactivate Student" : "Activate Student"}
+                      >
+                        {student.status === 1 ? (
+                          <span className="px-2 py-0.5 text-[10px] font-medium bg-red-100 rounded-full">OFF</span>
+                        ) : (
+                          <span className="px-2 py-0.5 text-[10px] font-medium bg-green-100 rounded-full">ON</span>
+                        )}
+                      </button>
                       <button
                         onClick={() => handleEdit(student)}
                         className="text-blue-600 hover:text-blue-900"
@@ -1246,11 +1307,10 @@ export const StudentsPage: React.FC = () => {
                   <button
                     key={index}
                     onClick={() => typeof pageNumber === 'number' && handlePageChange(pageNumber)}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      currentPage === pageNumber
-                        ? "bg-primary-600 text-white border border-primary-600"
-                        : "bg-white text-gray-700 border border-gray-300 hover:border-primary-600 hover:text-primary-600"
-                    }`}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentPage === pageNumber
+                      ? "bg-primary-600 text-white border border-primary-600"
+                      : "bg-white text-gray-700 border border-gray-300 hover:border-primary-600 hover:text-primary-600"
+                      }`}
                   >
                     {pageNumber}
                   </button>
@@ -1280,8 +1340,8 @@ export const StudentsPage: React.FC = () => {
             {statusFilter === 1
               ? students.filter(s => s.status === 1).length
               : statusFilter === 0
-              ? students.filter(s => s.status === 0).length
-              : students.length}
+                ? students.filter(s => s.status === 0).length
+                : students.length}
           </span>{" "}
           student{filteredStudents.length !== 1 ? "s" : ""}
         </p>
@@ -1592,7 +1652,7 @@ export const StudentsPage: React.FC = () => {
       {showModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           {/* Backdrop */}
-          <div 
+          <div
             className="fixed inset-0 bg-black bg-opacity-50 transition-opacity duration-300"
             onClick={handleCloseModal}
           ></div>
@@ -1636,9 +1696,8 @@ export const StudentsPage: React.FC = () => {
                         value={formData.first_name}
                         onChange={handleInputChange}
                         required
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.first_name ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.first_name ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       />
                       {formErrors.first_name && (
                         <p className="mt-1 text-xs text-red-600">{formErrors.first_name}</p>
@@ -1654,9 +1713,8 @@ export const StudentsPage: React.FC = () => {
                         name="last_name"
                         value={formData.last_name}
                         onChange={handleInputChange}
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.last_name ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.last_name ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       />
                       {formErrors.last_name && (
                         <p className="mt-1 text-xs text-red-600">{formErrors.last_name}</p>
@@ -1704,9 +1762,8 @@ export const StudentsPage: React.FC = () => {
                         onChange={(e) => handlePhoneInput(e, "phone")}
                         maxLength={10}
                         placeholder="10-digit phone number"
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.phone ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.phone ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       />
                       {formData.phone && formData.phone.length < 10 && !formErrors.phone && (
                         <p className="mt-1 text-xs text-gray-500">{formData.phone.length}/10 digits</p>
@@ -1739,9 +1796,8 @@ export const StudentsPage: React.FC = () => {
                         value={formData.admission_date}
                         onChange={handleInputChange}
                         required
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.admission_date ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.admission_date ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       />
                       {formErrors.admission_date && (
                         <p className="mt-1 text-xs text-red-600">{formErrors.admission_date}</p>
@@ -1760,9 +1816,8 @@ export const StudentsPage: React.FC = () => {
                         required
                         min="0"
                         step="100"
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.admission_fee ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.admission_fee ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       />
                       {formErrors.admission_fee && (
                         <p className="mt-1 text-xs text-red-600">{formErrors.admission_fee}</p>
@@ -1819,9 +1874,8 @@ export const StudentsPage: React.FC = () => {
                         value={formData.guardian_name}
                         onChange={handleInputChange}
                         required
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.guardian_name ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.guardian_name ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       />
                       {formErrors.guardian_name && (
                         <p className="mt-1 text-xs text-red-600">{formErrors.guardian_name}</p>
@@ -1839,9 +1893,8 @@ export const StudentsPage: React.FC = () => {
                         onChange={(e) => handlePhoneInput(e, "guardian_phone")}
                         maxLength={10}
                         placeholder="10-digit phone number"
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.guardian_phone ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.guardian_phone ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       />
                       {formData.guardian_phone && formData.guardian_phone.length < 10 && !formErrors.guardian_phone && (
                         <p className="mt-1 text-xs text-gray-500">{formData.guardian_phone.length}/10 digits</p>
@@ -1859,9 +1912,8 @@ export const StudentsPage: React.FC = () => {
                         name="guardian_relation"
                         value={formData.guardian_relation}
                         onChange={handleInputChange}
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.guardian_relation ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.guardian_relation ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       >
                         <option value="">Select Relation</option>
                         {relations.map((relation) => (
@@ -1889,9 +1941,8 @@ export const StudentsPage: React.FC = () => {
                         value={formData.permanent_address}
                         onChange={handleInputChange}
                         rows={2}
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.permanent_address ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.permanent_address ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       />
                       {formErrors.permanent_address && (
                         <p className="mt-1 text-xs text-red-600">{formErrors.permanent_address}</p>
@@ -1907,9 +1958,8 @@ export const StudentsPage: React.FC = () => {
                         value={formData.present_working_address}
                         onChange={handleInputChange}
                         rows={2}
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.present_working_address ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.present_working_address ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       />
                       {formErrors.present_working_address && (
                         <p className="mt-1 text-xs text-red-600">{formErrors.present_working_address}</p>
@@ -1924,9 +1974,8 @@ export const StudentsPage: React.FC = () => {
                         name="id_proof_type"
                         value={formData.id_proof_type}
                         onChange={handleInputChange}
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.id_proof_type ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.id_proof_type ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       >
                         <option value="">Select ID Proof Type</option>
                         {idProofTypes.map((type) => (
@@ -1947,9 +1996,8 @@ export const StudentsPage: React.FC = () => {
                         value={formData.id_proof_number}
                         onChange={handleIdProofInput}
                         placeholder={getIdProofTypeRules()?.min_length && getIdProofTypeRules()?.max_length ? `${getIdProofTypeRules()?.min_length}-${getIdProofTypeRules()?.max_length} characters` : "Enter ID proof number"}
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.id_proof_number ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.id_proof_number ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       />
                       {getIdProofTypeRules() && !formErrors.id_proof_number && (
                         <p className="mt-1 text-xs text-gray-500">
@@ -1969,9 +2017,8 @@ export const StudentsPage: React.FC = () => {
                         name="id_proof_status"
                         value={formData.id_proof_status}
                         onChange={handleInputChange}
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.id_proof_status ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.id_proof_status ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       >
                         <option value="Not Submitted">Not Submitted</option>
                         <option value="Submitted">Submitted</option>
@@ -1994,9 +2041,8 @@ export const StudentsPage: React.FC = () => {
                         name="room_id"
                         value={formData.room_id}
                         onChange={handleInputChange}
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.room_id ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.room_id ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       >
                         <option value="">Select Room</option>
                         {rooms.map((room) => (
@@ -2098,9 +2144,8 @@ export const StudentsPage: React.FC = () => {
                         value={formData.first_name}
                         onChange={handleInputChange}
                         required
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.first_name ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.first_name ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       />
                       {formErrors.first_name && (
                         <p className="mt-1 text-xs text-red-600">{formErrors.first_name}</p>
@@ -2116,9 +2161,8 @@ export const StudentsPage: React.FC = () => {
                         name="last_name"
                         value={formData.last_name}
                         onChange={handleInputChange}
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.last_name ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.last_name ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       />
                       {formErrors.last_name && (
                         <p className="mt-1 text-xs text-red-600">{formErrors.last_name}</p>
@@ -2166,9 +2210,8 @@ export const StudentsPage: React.FC = () => {
                         onChange={(e) => handlePhoneInput(e, "phone")}
                         maxLength={10}
                         placeholder="10-digit phone number"
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.phone ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.phone ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       />
                       {formData.phone && formData.phone.length < 10 && !formErrors.phone && (
                         <p className="mt-1 text-xs text-gray-500">{formData.phone.length}/10 digits</p>
@@ -2201,9 +2244,8 @@ export const StudentsPage: React.FC = () => {
                         value={formData.admission_date}
                         onChange={handleInputChange}
                         required
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.admission_date ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.admission_date ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       />
                       {formErrors.admission_date && (
                         <p className="mt-1 text-xs text-red-600">{formErrors.admission_date}</p>
@@ -2222,9 +2264,8 @@ export const StudentsPage: React.FC = () => {
                         required
                         min="0"
                         step="100"
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.admission_fee ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.admission_fee ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       />
                       {formErrors.admission_fee && (
                         <p className="mt-1 text-xs text-red-600">{formErrors.admission_fee}</p>
@@ -2281,9 +2322,8 @@ export const StudentsPage: React.FC = () => {
                         value={formData.guardian_name}
                         onChange={handleInputChange}
                         required
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.guardian_name ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.guardian_name ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       />
                       {formErrors.guardian_name && (
                         <p className="mt-1 text-xs text-red-600">{formErrors.guardian_name}</p>
@@ -2301,9 +2341,8 @@ export const StudentsPage: React.FC = () => {
                         onChange={(e) => handlePhoneInput(e, "guardian_phone")}
                         maxLength={10}
                         placeholder="10-digit phone number"
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.guardian_phone ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.guardian_phone ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       />
                       {formData.guardian_phone && formData.guardian_phone.length < 10 && !formErrors.guardian_phone && (
                         <p className="mt-1 text-xs text-gray-500">{formData.guardian_phone.length}/10 digits</p>
@@ -2321,9 +2360,8 @@ export const StudentsPage: React.FC = () => {
                         name="guardian_relation"
                         value={formData.guardian_relation}
                         onChange={handleInputChange}
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.guardian_relation ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.guardian_relation ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       >
                         <option value="">Select Relation</option>
                         {relations.map((relation) => (
@@ -2351,9 +2389,8 @@ export const StudentsPage: React.FC = () => {
                         value={formData.permanent_address}
                         onChange={handleInputChange}
                         rows={2}
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.permanent_address ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.permanent_address ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       />
                       {formErrors.permanent_address && (
                         <p className="mt-1 text-xs text-red-600">{formErrors.permanent_address}</p>
@@ -2369,9 +2406,8 @@ export const StudentsPage: React.FC = () => {
                         value={formData.present_working_address}
                         onChange={handleInputChange}
                         rows={2}
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.present_working_address ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.present_working_address ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       />
                       {formErrors.present_working_address && (
                         <p className="mt-1 text-xs text-red-600">{formErrors.present_working_address}</p>
@@ -2386,9 +2422,8 @@ export const StudentsPage: React.FC = () => {
                         name="id_proof_type"
                         value={formData.id_proof_type}
                         onChange={handleInputChange}
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.id_proof_type ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.id_proof_type ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       >
                         <option value="">Select ID Proof Type</option>
                         {idProofTypes.map((type) => (
@@ -2409,9 +2444,8 @@ export const StudentsPage: React.FC = () => {
                         value={formData.id_proof_number}
                         onChange={handleIdProofInput}
                         placeholder={getIdProofTypeRules()?.min_length && getIdProofTypeRules()?.max_length ? `${getIdProofTypeRules()?.min_length}-${getIdProofTypeRules()?.max_length} characters` : "Enter ID proof number"}
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.id_proof_number ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.id_proof_number ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       />
                       {getIdProofTypeRules() && !formErrors.id_proof_number && (
                         <p className="mt-1 text-xs text-gray-500">
@@ -2431,9 +2465,8 @@ export const StudentsPage: React.FC = () => {
                         name="id_proof_status"
                         value={formData.id_proof_status}
                         onChange={handleInputChange}
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.id_proof_status ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.id_proof_status ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       >
                         <option value="Not Submitted">Not Submitted</option>
                         <option value="Submitted">Submitted</option>
@@ -2456,9 +2489,8 @@ export const StudentsPage: React.FC = () => {
                         name="room_id"
                         value={formData.room_id}
                         onChange={handleInputChange}
-                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                          formErrors.room_id ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${formErrors.room_id ? 'border-red-500' : 'border-gray-300'
+                          }`}
                       >
                         <option value="">Select Room</option>
                         {rooms.map((room) => (
@@ -2558,7 +2590,7 @@ export const StudentsPage: React.FC = () => {
       {showStatsCard && (
         <div className="md:hidden fixed inset-0 z-30">
           {/* Backdrop */}
-          <div 
+          <div
             className="fixed inset-0 bg-black bg-opacity-30 transition-opacity duration-300"
             onClick={() => setShowStatsCard(false)}
           ></div>

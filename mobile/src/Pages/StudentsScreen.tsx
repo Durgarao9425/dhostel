@@ -56,43 +56,63 @@ const StudentCard = React.memo(({ student, onPress, onWhatsApp, onCall, onToggle
             onPress={() => onPress(student.student_id)}
             activeOpacity={0.8}
         >
-            <View style={[styles.statusIndicator, { backgroundColor: isActive ? '#10B981' : '#EF4444' }]} />
+            <View style={[styles.statusIndicator, { backgroundColor: isActive ? '#10B981' : '#CBD5E1' }]} />
             <View style={styles.cardMain}>
                 <View style={styles.avatarBox}>
                     {student.photo ? (
                         <Image source={{ uri: student.photo }} style={styles.avatarImg} fadeDuration={0} />
                     ) : (
-                        <Users color="#94A3B8" size={20} />
+                        <Users color={isActive ? "#1E293B" : "#94A3B8"} size={20} />
                     )}
                 </View>
-                <View style={styles.infoContainer}>
-                    <Text style={styles.nameText} numberOfLines={1}>
-                        {student.first_name} {student.last_name}
-                    </Text>
+                <View style={[styles.infoContainer, { flexShrink: 1 }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
+                        <Text style={[styles.nameText, !isActive && { color: '#64748B' }]} numberOfLines={1}>
+                            {student.first_name}
+                        </Text>
+                        <View style={[
+                            styles.statusBadge,
+                            { backgroundColor: isActive ? '#DCFCE7' : '#F1F5F9' }
+                        ]}>
+                            <Text style={[
+                                styles.statusBadgeText,
+                                { color: isActive ? '#10B981' : '#64748B' }
+                            ]}>
+                                {isActive ? 'ACTIVE' : 'INACTIVE'}
+                            </Text>
+                        </View>
+                    </View>
                     <View style={styles.roomBadge}>
-                        <Text style={styles.roomText}>ROOM {student.room_number || 'N/A'}</Text>
+                        <Text style={styles.roomText}>R: {student.room_number || 'N/A'}</Text>
                     </View>
                 </View>
-                <View style={styles.actionColumn}>
+
+                <View style={[styles.actionColumn, { marginLeft: 'auto', paddingLeft: 4 }]}>
                     <TouchableOpacity
                         onPress={() => onWhatsApp(student.phone)}
                         style={styles.iconCircle}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}
                     >
-                        <MessageCircle size={18} color="#25D366" />
+                        <MessageCircle size={16} color="#25D366" />
                     </TouchableOpacity>
                     <TouchableOpacity
                         onPress={() => onCall(student.phone)}
                         style={styles.iconCircle}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}
                     >
-                        <Phone size={18} color="#0EA5E9" />
+                        <Phone size={16} color="#0EA5E9" />
                     </TouchableOpacity>
                     <TouchableOpacity
                         onPress={() => onToggle(student)}
-                        style={[styles.statusToggleBtn, { backgroundColor: isActive ? '#FEE2E2' : '#DCFCE7' }]}
+                        style={[
+                            styles.statusToggleBtn,
+                            { backgroundColor: isActive ? '#F1F5F9' : '#DCFCE7' }
+                        ]}
                     >
-                        <Text style={[styles.statusToggleText, { color: isActive ? '#EF4444' : '#10B981' }]}>
+                        <Text style={[
+                            styles.statusToggleText,
+                            { color: isActive ? '#64748B' : '#10B981' }
+                        ]}>
                             {isActive ? 'OFF' : 'ON'}
                         </Text>
                     </TouchableOpacity>
@@ -556,6 +576,15 @@ const styles = StyleSheet.create({
         justifyContent: 'center', alignItems: 'center',
     },
     statusToggleText: { fontSize: 10, fontWeight: '900' },
+    statusBadge: {
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+    },
+    statusBadgeText: {
+        fontSize: 8,
+        fontWeight: '900',
+    },
     fab: {
         position: 'absolute', bottom: 130, right: 20,
         width: 60, height: 60, borderRadius: 30,

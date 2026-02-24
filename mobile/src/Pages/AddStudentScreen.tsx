@@ -204,6 +204,7 @@ export const AddStudentScreen = ({ navigation, route }: any) => {
         room_id: '',
         floor_number: '',
         monthly_rent: '',
+        status: 'Active', // Added status field
     });
 
     const [idProofTypes, setIdProofTypes] = useState<any[]>([]);
@@ -242,6 +243,7 @@ export const AddStudentScreen = ({ navigation, route }: any) => {
                 room_id: student.room_id ? student.room_id.toString() : '',
                 floor_number: student.floor_number ? student.floor_number.toString() : '',
                 monthly_rent: student.monthly_rent ? student.monthly_rent.toString() : '',
+                status: (student.status === 1 || student.status === 'Active') ? 'Active' : 'Inactive',
             });
         }
     }, [isEdit, student]);
@@ -288,6 +290,7 @@ export const AddStudentScreen = ({ navigation, route }: any) => {
             room_id: '',
             floor_number: '',
             monthly_rent: '',
+            status: 'Active',
         });
         setErrors({});
     };
@@ -383,7 +386,7 @@ export const AddStudentScreen = ({ navigation, route }: any) => {
                 hostel_id: user?.hostel_id,
                 admission_fee: parseFloat(formData.admission_fee),
                 admission_status: formData.admission_status === 'Paid' ? 1 : 0,
-                status: isEdit ? student.status : 1, // Preserve status on edit or default to 1 on create
+                status: formData.status === 'Active' ? 1 : 0,
                 room_id: formData.room_id ? parseInt(formData.room_id) : null,
                 floor_number: formData.floor_number ? parseInt(formData.floor_number) : null,
                 id_proof_type: formData.id_proof_type_id || null,
@@ -640,6 +643,13 @@ export const AddStudentScreen = ({ navigation, route }: any) => {
                         error={errors.room_id}
                         icon={Home}
                         onPress={() => setRoomModalVisible(true)}
+                    />
+
+                    <Selector
+                        label="Account Status *"
+                        options={['Active', 'Inactive']}
+                        selected={formData.status}
+                        onSelect={(val: string) => setFormData({ ...formData, status: val })}
                     />
 
                     <FormInput

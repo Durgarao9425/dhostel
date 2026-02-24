@@ -547,23 +547,16 @@ export default function FinanceScreen() {
                 const roomMatch = f.room_number?.toString().includes(q);
                 if (q && !nameMatch && !roomMatch) return false;
 
-                // Date filter — check multiple date fields so records aren't hidden wrongly
-                // Removed local date filter because we now filter by month via API.
-                // Status filtering remains local on the fetched monthly dataset.
-
-                // FIX: Status filter — use Sets so any backend variation is handled (case-insensitive)
                 const status = (f.fee_status ?? '').toLowerCase();
+                const due = Math.max(0, sf(f.total_amount || f.total_due || f.monthly_rent) - sf(f.amount_paid || f.paid_amount));
+
                 if (statusFilter === 'Unpaid') {
-                    const due = Math.max(0, sf(f.total_amount || f.total_due || f.monthly_rent) - sf(f.amount_paid || f.paid_amount));
-                    return (UNPAID_STATUSES.has(status) || due > 0) && !PAID_STATUSES.has(status) && !PARTIAL_STATUSES.has(status);
+                    // Show anyone who hasn't fully paid
+                    return !PAID_STATUSES.has(status) || due > 0;
                 }
                 if (statusFilter === 'Paid') {
-                    return PAID_STATUSES.has(status);
-                }
-                if (statusFilter === 'Partial') {
-                    const paid = sf(f.amount_paid || f.paid_amount || 0);
-                    const total = sf(f.total_amount || f.total_due || f.monthly_rent || 0);
-                    return PARTIAL_STATUSES.has(status) || (paid > 0 && total > 0 && paid < total);
+                    // Show anyone who has fully paid
+                    return PAID_STATUSES.has(status) && due <= 0;
                 }
                 return true;
             });
@@ -598,19 +591,13 @@ export default function FinanceScreen() {
     const unpaidCount = useMemo(() => fees.filter(f => {
         const status = (f.fee_status ?? '').toLowerCase();
         const due = Math.max(0, sf(f.total_amount || f.total_due || f.monthly_rent) - sf(f.amount_paid || f.paid_amount));
-        return UNPAID_STATUSES.has(status) || (due > 0 && !PAID_STATUSES.has(status) && !PARTIAL_STATUSES.has(status));
-    }).length, [fees]);
-
-    const partialCount = useMemo(() => fees.filter(f => {
-        const status = (f.fee_status ?? '').toLowerCase();
-        const paid = sf(f.amount_paid || f.paid_amount || 0);
-        const total = sf(f.total_amount || f.total_due || f.monthly_rent || 0);
-        return PARTIAL_STATUSES.has(status) || (paid > 0 && total > 0 && paid < total);
+        return !PAID_STATUSES.has(status) || due > 0;
     }).length, [fees]);
 
     const paidCount = useMemo(() => fees.filter(f => {
         const status = (f.fee_status ?? '').toLowerCase();
-        return PAID_STATUSES.has(status);
+        const due = Math.max(0, sf(f.total_amount || f.total_due || f.monthly_rent) - sf(f.amount_paid || f.paid_amount));
+        return PAID_STATUSES.has(status) && due <= 0;
     }).length, [fees]);
 
     return (
@@ -680,7 +667,6 @@ export default function FinanceScreen() {
                     <View style={S.simpleFilterRow}>
                         {([
                             { key: 'Unpaid', label: 'Unpaid', count: unpaidCount, color: '#EF4444' },
-                            { key: 'Partial', label: 'Partial', count: partialCount, color: '#3B82F6' },
                             { key: 'Paid', label: 'Paid', count: paidCount, color: '#10B981' },
                         ] as const).map(({ key, label, count, color }) => {
                             const isActive = statusFilter === key;
