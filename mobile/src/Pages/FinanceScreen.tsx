@@ -551,8 +551,12 @@ export default function FinanceScreen() {
                 const due = Math.max(0, sf(f.total_amount || f.total_due || f.monthly_rent) - sf(f.amount_paid || f.paid_amount));
 
                 if (statusFilter === 'Unpaid') {
-                    // Show anyone who hasn't fully paid
-                    return !PAID_STATUSES.has(status) || due > 0;
+                    // Show anyone who hasn't paid anything OR who is fully unpaid
+                    return (!PAID_STATUSES.has(status) && !PARTIAL_STATUSES.has(status)) || (due > 0 && !PARTIAL_STATUSES.has(status));
+                }
+                if (statusFilter === 'Partial') {
+                    // Show anyone who is partially paid
+                    return PARTIAL_STATUSES.has(status);
                 }
                 if (statusFilter === 'Paid') {
                     // Show anyone who has fully paid
@@ -591,7 +595,12 @@ export default function FinanceScreen() {
     const unpaidCount = useMemo(() => fees.filter(f => {
         const status = (f.fee_status ?? '').toLowerCase();
         const due = Math.max(0, sf(f.total_amount || f.total_due || f.monthly_rent) - sf(f.amount_paid || f.paid_amount));
-        return !PAID_STATUSES.has(status) || due > 0;
+        return (!PAID_STATUSES.has(status) && !PARTIAL_STATUSES.has(status)) || (due > 0 && !PARTIAL_STATUSES.has(status));
+    }).length, [fees]);
+
+    const partialCount = useMemo(() => fees.filter(f => {
+        const status = (f.fee_status ?? '').toLowerCase();
+        return PARTIAL_STATUSES.has(status);
     }).length, [fees]);
 
     const paidCount = useMemo(() => fees.filter(f => {
@@ -667,6 +676,7 @@ export default function FinanceScreen() {
                     <View style={S.simpleFilterRow}>
                         {([
                             { key: 'Unpaid', label: 'Unpaid', count: unpaidCount, color: '#EF4444' },
+                            { key: 'Partial', label: 'Partial', count: partialCount, color: '#3B82F6' },
                             { key: 'Paid', label: 'Paid', count: paidCount, color: '#10B981' },
                         ] as const).map(({ key, label, count, color }) => {
                             const isActive = statusFilter === key;

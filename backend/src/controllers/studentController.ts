@@ -2,17 +2,14 @@ import { Response } from 'express';
 import db from '../config/database.js';
 import { AuthRequest } from '../middleware/auth.js';
 
-// Helper function to convert ISO datetime string to date-only format (YYYY-MM-DD)
 const convertToDateOnly = (dateValue: any): string | null => {
   if (!dateValue) return null;
   if (typeof dateValue === 'string' && dateValue.includes('T')) {
-    // Extract date part from ISO string (YYYY-MM-DDTHH:mm:ss.sssZ -> YYYY-MM-DD)
     return dateValue.split('T')[0];
   }
   return dateValue;
 };
 
-// Get all students (Owner sees only their hostel students)
 export const getStudents = async (req: AuthRequest, res: Response) => {
   try {
     const { hostelId, status, search, page, limit } = req.query;
@@ -29,7 +26,6 @@ export const getStudents = async (req: AuthRequest, res: Response) => {
         's.admission_date as check_in_date'
       );
 
-    // If user is hostel owner (role_id = 2), filter by their hostels
     if (user?.role_id === 2) {
       if (user.hostel_id) {
         query = query.where('s.hostel_id', user.hostel_id);
@@ -60,12 +56,10 @@ export const getStudents = async (req: AuthRequest, res: Response) => {
       query = query.where('s.hostel_id', hostelId);
     }
 
-    // Filter by status if provided
     if (status !== undefined) {
       query = query.where('s.status', status);
     }
 
-    // Filter by search term
     if (search) {
       const searchTerm = `%${search}%`;
       query = query.where(function () {
