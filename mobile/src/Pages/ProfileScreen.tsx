@@ -213,11 +213,6 @@ const ProfileScreen = ({ navigation }: any) => {
                         <Text style={styles.sectionLabel}>OPERATIONS & ANALYTICS</Text>
                         <View style={styles.toolGrid}>
                             <GridTool
-                                icon={TrendingUp} title={t.income}
-                                value={stats ? `₹${(stats.fees.today_collected / 1000).toFixed(1)}k` : '₹0k'}
-                                color="#3B82F6" bg="#EFF6FF" onPress={() => navigation.navigate('Income')}
-                            />
-                            <GridTool
                                 icon={FileText} title={t.reports} value="Reports"
                                 color="#8B5CF6" bg="#F5F3FF" onPress={() => navigation.navigate('Reports')}
                             />

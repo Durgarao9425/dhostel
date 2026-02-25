@@ -141,7 +141,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
     // Get today's rent collection (from fee_payments table)
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     let todayRentQuery = db('fee_payments')
-      .where('payment_date', today)
+      .whereRaw('DATE(payment_date) = ?', [today])
       .sum('amount as total')
       .count('* as count');
     if (hostelIds.length > 0) {
@@ -152,7 +152,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
     // Get today's split by payment mode
     let todaySplitQuery = db('fee_payments as fp')
       .leftJoin('payment_modes as pm', 'fp.payment_mode_id', 'pm.payment_mode_id')
-      .where('fp.payment_date', today)
+      .whereRaw('DATE(fp.payment_date) = ?', [today])
       .select('pm.payment_mode_name as mode', db.raw('SUM(fp.amount) as total'))
       .groupBy('pm.payment_mode_name');
     if (hostelIds.length > 0) {

@@ -114,6 +114,7 @@ export default function HomeScreen() {
                             <Text style={s.userName}>{user?.full_name || 'Owner'}</Text>
                         </View>
                         <View style={s.headerActions}>
+                            <HeaderNotification navigation={navigation} />
                             <ProfileMenu />
                         </View>
                     </View>
