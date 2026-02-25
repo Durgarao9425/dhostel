@@ -336,7 +336,7 @@ export const getIncomeAnalytics = async (req: AuthRequest, res: Response) => {
         title: inc.source || 'Other Income',
         subtitle: inc.payment_mode || 'Cash',
         amount: parseFloat(inc.amount),
-        date: inc.income_date,
+        date: inc.created_at || inc.income_date,
         type: 'Other',
         description: inc.description
       })),
@@ -345,7 +345,7 @@ export const getIncomeAnalytics = async (req: AuthRequest, res: Response) => {
         title: `${fp.first_name || 'Student'} ${fp.last_name || ''}`,
         subtitle: `Rent · ${fp.payment_mode || 'Cash'}`,
         amount: parseFloat(fp.amount),
-        date: fp.payment_date,
+        date: fp.created_at || fp.payment_date,
         student_id: fp.student_id,
         type: 'Rent'
       }))

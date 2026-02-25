@@ -151,7 +151,6 @@ export const IncomeScreen = ({ navigation }: any) => {
                 </LinearGradient>
             </View>
             <View style={styles.chartFooter}>
-                <Text style={styles.footerText}>Trending UP this {activeTab.toLowerCase()}</Text>
             </View>
         </View>
     );
