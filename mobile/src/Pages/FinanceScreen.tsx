@@ -450,8 +450,6 @@ export default function FinanceScreen() {
 
     useEffect(() => {
         if (route.params?.filter === 'today') {
-            // "Today" likely implies "Current Month" in monthly view, but user wants to see today's activity.
-            // We set month to current.
             setCurrentDate(new Date());
             setStatusFilter('Paid');
             navigation.setParams({ filter: undefined });
@@ -462,10 +460,9 @@ export default function FinanceScreen() {
         const d = new Date(currentDate);
         d.setMonth(d.getMonth() + delta);
         setCurrentDate(d);
-        // Explicitly mark dirty to ensure refetch? No, useEffect[currentDate] handles it.
     }, [currentDate]);
 
-    const getMonthLabel = () => currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+    const getMonthLabel = () => currentDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
     const handleNavigate = useCallback((id: number) => navigation.navigate('StudentDetails', { studentId: id }), [navigation]);
     const handleWhatsApp = useCallback((phone: string, name: string, due: number) => {

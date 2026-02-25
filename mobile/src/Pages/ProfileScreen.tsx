@@ -30,7 +30,8 @@ import {
     Briefcase,
     Settings2,
     Wrench,
-    Trash2
+    Trash2,
+    QrCode
 } from 'lucide-react-native';
 
 import { useTranslation } from 'react-i18next';
@@ -110,7 +111,7 @@ const ProfileScreen = ({ navigation }: any) => {
 
     const fetchStats = async () => {
         try {
-            const response = await api.get('/dashboard/owner-stats');
+            const response = await api.get('/reports/dashboard-stats');
             if (response.data.success) {
                 setStats(response.data.data);
             }
@@ -213,12 +214,21 @@ const ProfileScreen = ({ navigation }: any) => {
                         <Text style={styles.sectionLabel}>OPERATIONS & ANALYTICS</Text>
                         <View style={styles.toolGrid}>
                             <GridTool
+                                icon={TrendingUp} title={t.income}
+                                value={stats ? `₹${(stats.monthlyIncome / 1000).toFixed(1)}k` : '₹0k'}
+                                color="#3B82F6" bg="#EFF6FF" onPress={() => navigation.navigate('Income')}
+                            />
+                            <GridTool
                                 icon={FileText} title={t.reports} value="Reports"
                                 color="#8B5CF6" bg="#F5F3FF" onPress={() => navigation.navigate('Reports')}
                             />
                             <GridTool
                                 icon={Wrench} title="Maintenance" value="Issues"
                                 color="#EAB308" bg="#FEF9C3" onPress={() => navigation.navigate('Maintenance')}
+                            />
+                            <GridTool
+                                icon={QrCode} title="Quick Add" value="QR Form"
+                                color="#10B981" bg="#DCFCE7" onPress={() => navigation.navigate('TenantQR')}
                             />
                         </View>
                     </View>

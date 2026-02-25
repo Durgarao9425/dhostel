@@ -27,6 +27,7 @@ import IncomeScreen from '../Pages/InComeScreen';
 import IncomeDetailsScreen from '../Pages/IncomeDetailsScreen';
 import AddIncomeScreen from '../Pages/AddIncomeScreen';
 import PlaceholderScreen from '../Pages/PlaceholderScreen';
+import TenantQRScreen from '../Pages/TenantQRScreen';
 
 
 import BottomTabNavigator from '../components/BottomTabNavigator';
@@ -130,6 +131,7 @@ const AppNavigator = () => {
                 <Stack.Screen name="Maintenance" component={MaintenanceScreen} />
                 <Stack.Screen name="DeleteRooms" component={DeleteRoomsScreen} />
                 <Stack.Screen name="DeleteExpenses" component={DeleteExpensesScreen} />
+                <Stack.Screen name="TenantQR" component={TenantQRScreen} />
             </Stack.Navigator>
         </NavigationContainer>
     );

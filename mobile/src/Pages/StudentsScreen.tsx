@@ -70,6 +70,11 @@ const StudentCard = React.memo(({ student, onPress, onWhatsApp, onCall, onToggle
                         <Text style={[styles.nameText, !isActive && { color: '#64748B' }]} numberOfLines={1}>
                             {student.first_name}
                         </Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                        <View style={[styles.roomBadge, { marginTop: 0 }]}>
+                            <Text style={styles.roomText}>R: {student.room_number || 'N/A'}</Text>
+                        </View>
                         <View style={[
                             styles.statusBadge,
                             { backgroundColor: isActive ? '#DCFCE7' : '#F1F5F9' }
@@ -81,9 +86,6 @@ const StudentCard = React.memo(({ student, onPress, onWhatsApp, onCall, onToggle
                                 {isActive ? 'ACTIVE' : 'INACTIVE'}
                             </Text>
                         </View>
-                    </View>
-                    <View style={styles.roomBadge}>
-                        <Text style={styles.roomText}>R: {student.room_number || 'N/A'}</Text>
                     </View>
                 </View>
 

@@ -358,12 +358,20 @@ export const getIncomeAnalytics = async (req: AuthRequest, res: Response) => {
     // 4. Graph Data
     let graph: { label: string; value: number }[] = [];
     if (type === 'day') {
-      // For display, simulate hourly distribution if timestamps aren't precise
       graph = [
-        { label: '6am', value: 0 }, { label: '9am', value: totalAmount * 0.15 },
-        { label: '12pm', value: totalAmount * 0.35 }, { label: '3pm', value: totalAmount * 0.25 },
-        { label: '6pm', value: totalAmount * 0.15 }, { label: '9pm', value: totalAmount * 0.10 }
+        { label: '6am', value: 0 }, { label: '9am', value: 0 },
+        { label: '12pm', value: 0 }, { label: '3pm', value: 0 },
+        { label: '6pm', value: 0 }, { label: '9pm', value: 0 }
       ];
+      transactions.forEach((t) => {
+        const h = new Date(t.date).getHours() || 0;
+        if (h < 6) graph[0].value += t.amount;
+        else if (h < 10) graph[1].value += t.amount;
+        else if (h < 14) graph[2].value += t.amount;
+        else if (h < 17) graph[3].value += t.amount;
+        else if (h < 20) graph[4].value += t.amount;
+        else graph[5].value += t.amount;
+      });
     } else if (type === 'week') {
       const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       for (let i = 6; i >= 0; i--) {
