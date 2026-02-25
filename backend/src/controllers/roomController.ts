@@ -136,17 +136,7 @@ export const getRoomById = async (req: AuthRequest, res: Response) => {
       .leftJoin('room_types as rt', 'r.room_type_id', 'rt.room_type_id')
       .leftJoin('hostel_master as h', 'r.hostel_id', 'h.hostel_id')
       .select(
-        'r.room_id',
-        'r.hostel_id',
-        'r.room_number',
-        'r.room_type_id',
-        'r.floor_number',
-        'r.capacity',
-        'r.occupied_beds',
-        'r.rent_per_bed',
-        'r.amenities',
-        'r.status',
-        'r.is_available',
+        'r.*',
         'rt.room_type_name',
         'rt.description as room_type_description',
         'h.hostel_name'
@@ -177,7 +167,7 @@ export const getRoomById = async (req: AuthRequest, res: Response) => {
     const students = await db('students')
       .where('room_id', roomId)
       .where('status', 1)
-      .select('student_id', 'first_name', 'last_name', 'phone', 'photo');
+      .select('student_id', 'first_name', 'last_name', 'phone');
 
     const occupiedCount = students.length;
 
