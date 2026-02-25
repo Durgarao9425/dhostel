@@ -647,15 +647,26 @@ export default function FinanceScreen() {
                 </View>
 
                 {/* Date Selection Area */}
-                <TouchableOpacity
-                    onPress={() => setDatePickerVisibility(true)}
-                    activeOpacity={0.7}
-                    style={S.dateBadgeLarge}
-                >
-                    <Calendar size={18} color={theme.primary} />
-                    <Text style={S.dateBadgeTextLarge}>{getMonthLabel()}</Text>
-                    <ChevronRight color="#94A3B8" size={20} />
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                    <TouchableOpacity
+                        onPress={() => setDatePickerVisibility(true)}
+                        activeOpacity={0.7}
+                        style={[S.dateBadgeLarge, { flex: 1, marginBottom: 0 }]}
+                    >
+                        <Calendar size={18} color={theme.primary} />
+                        <Text style={S.dateBadgeTextLarge}>{getMonthLabel()}</Text>
+                        <ChevronRight color="#94A3B8" size={20} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={() => {
+                            setCurrentDate(new Date());
+                            STORE.dirty = true;
+                        }}
+                        style={S.todayBtn}
+                    >
+                        <Text style={[S.todayBtnText, { color: theme.primary }]}>Today</Text>
+                    </TouchableOpacity>
+                </View>
 
                 <DateTimePickerModal
                     isVisible={isDatePickerVisible}
@@ -845,8 +856,10 @@ const S = StyleSheet.create({
     simpleFilterLabel: { fontSize: 13, fontWeight: '700' },
     simpleFilterIndicator: { position: 'absolute', bottom: -5, width: 4, height: 4, borderRadius: 2 },
 
-    dateBadgeLarge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', paddingHorizontal: 16, paddingVertical: 14, borderRadius: 14, elevation: 1, marginBottom: 12, gap: 12 },
+    dateBadgeLarge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', paddingHorizontal: 16, paddingVertical: 14, borderRadius: 14, elevation: 1, gap: 12 },
     dateBadgeTextLarge: { fontSize: 16, fontWeight: '800', color: '#1E293B', flex: 1 },
+    todayBtn: { paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#FFF', borderRadius: 14, elevation: 1, justifyContent: 'center' },
+    todayBtnText: { fontSize: 14, fontWeight: '800' },
     listContent: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 150 },
     loaderWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
     loaderText: { fontSize: 14, color: '#94A3B8', fontWeight: '600' },
