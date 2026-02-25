@@ -16,6 +16,7 @@ import activityRoutes from './routes/activityRoutes.js';
 import amenitiesRoutes from './routes/amenities.routes.js';
 import relationsRoutes from './routes/relationsRoutes.js';
 import idProofTypesRoutes from './routes/idProofTypesRoutes.js';
+import publicRoutes from './routes/publicRoutes.js';
 import { startMonthlyFeesGenerationJob } from './jobs/monthlyFeesGeneration.js';
 
 // Load environment variables
@@ -73,6 +74,7 @@ app.use('/api/activity', activityRoutes);
 app.use('/api/amenities', amenitiesRoutes);
 app.use('/api/relations', relationsRoutes);
 app.use('/api/id-proof-types', idProofTypesRoutes);
+app.use('/api/public', publicRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
