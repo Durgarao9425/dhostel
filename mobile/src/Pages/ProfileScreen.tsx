@@ -159,7 +159,7 @@ const ProfileScreen = ({ navigation }: any) => {
         </TouchableOpacity>
     );
 
-    const occupancyCount = stats ? `${stats.rooms.occupied_beds}/${stats.rooms.total_beds}` : '-/-';
+    const occupancyCount = stats?.rooms ? `${stats.rooms.occupied_beds}/${stats.rooms.total_beds}` : '-/-';
 
     return (
         <View style={styles.container}>
