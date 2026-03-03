@@ -78,8 +78,8 @@ export const createIncome = async (req: AuthRequest, res: Response) => {
 
     // Determine hostel_id based on user role
     let hostel_id: number;
-
-    if (user?.role_id === 2) {
+    // Use Number() to ensure it matches even if role_id is string
+    if (Number(user?.role_id) === 2) {
       // Hostel owner - use hostel from JWT
       if (!user.hostel_id) {
         return res.status(403).json({
@@ -285,18 +285,18 @@ export const getIncomeAnalytics = async (req: AuthRequest, res: Response) => {
     const user = req.user;
     const hostelId = user?.hostel_id;
 
-    if (!date) return res.status(400).json({ success: false, error: 'Date is required' });
+    const queryDate = (date as string) || new Date().toISOString().split('T')[0];
 
     let startDate: string, endDate: string;
-    const refDate = new Date(date as string);
+    const refDate = new Date(queryDate);
 
     // Adjust for JS Date being UTC if not careful, but splitting string is safer
     if (type === 'day') {
-      startDate = date as string;
-      endDate = date as string;
+      startDate = queryDate;
+      endDate = queryDate;
     } else if (type === 'week') {
       // Last 7 days
-      endDate = date as string;
+      endDate = queryDate;
       const d = new Date(refDate);
       d.setDate(d.getDate() - 6);
       startDate = d.toISOString().split('T')[0];

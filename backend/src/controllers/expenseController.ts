@@ -387,8 +387,8 @@ export const cloneExpenses = async (req: AuthRequest, res: Response) => {
     }
 
     let hostel_id: number;
-    if (user?.role_id === 2) {
-      if (!user.hostel_id) return res.status(403).json({ success: false, error: 'Not linked to a hostel' });
+    if (Number(user?.role_id) === 2) {
+      if (!user?.hostel_id) return res.status(403).json({ success: false, error: 'Not linked to a hostel' });
       hostel_id = user.hostel_id;
     } else {
       hostel_id = parseInt(req.body.hostel_id);
