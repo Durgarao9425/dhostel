@@ -441,7 +441,7 @@ export const getMonthlyFeesSummary = async (req: AuthRequest, res: Response) => 
         's.last_name',
         's.phone',
         's.email',
-        's.monthly_rent as student_monthly_rent',
+        db.raw('COALESCE(s.monthly_rent, r.rent_per_bed, 0) as student_monthly_rent'),
         'r.room_number',
         's.floor_number',
         's.admission_date',

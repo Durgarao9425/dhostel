@@ -448,13 +448,8 @@ export default function FinanceScreen() {
         return () => task.cancel();
     }, [fetchData, currentDate]));
 
-    useEffect(() => {
-        if (route.params?.filter === 'today') {
-            setCurrentDate(new Date());
-            setStatusFilter('Paid');
-            navigation.setParams({ filter: undefined });
-        }
-    }, [route.params]);
+    // Current Date Logic removed redirection as per request
+
 
     const shiftMonth = useCallback((delta: number) => {
         const d = new Date(currentDate);
@@ -656,15 +651,6 @@ export default function FinanceScreen() {
                         <Calendar size={18} color={theme.primary} />
                         <Text style={S.dateBadgeTextLarge}>{getMonthLabel()}</Text>
                         <ChevronRight color="#94A3B8" size={20} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={() => {
-                            setCurrentDate(new Date());
-                            STORE.dirty = true;
-                        }}
-                        style={S.todayBtn}
-                    >
-                        <Text style={[S.todayBtnText, { color: theme.primary }]}>Today</Text>
                     </TouchableOpacity>
                 </View>
 
