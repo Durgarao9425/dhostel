@@ -216,7 +216,7 @@ const ProfileScreen = ({ navigation }: any) => {
                             <GridTool
                                 icon={TrendingUp} title={t.income}
                                 value={stats ? `₹${(stats.monthlyIncome / 1000).toFixed(1)}k` : '₹0k'}
-                                color="#3B82F6" bg="#EFF6FF" onPress={() => navigation.navigate('Income')}
+                                color="#3B82F6" bg="#EFF6FF" onPress={() => navigation.navigate('IncomeDetails', { period: 'month' })}
                             />
                             <GridTool
                                 icon={FileText} title={t.reports} value="Reports"

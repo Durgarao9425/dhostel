@@ -13,7 +13,9 @@ import {
     Alert,
     StatusBar,
     InteractionManager,
-    Switch
+    Switch,
+    Animated,
+    Platform
 } from 'react-native';
 import { Card } from '../components/Card';
 import { Badge } from '../components/Badge';
@@ -115,6 +117,18 @@ const StudentDetailsScreen = ({ route, navigation }: any) => {
     // Date picker visibility
     const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
     const [isDueDatePickerVisible, setDueDatePickerVisibility] = useState(false);
+
+    // Backdrop animation
+    const backdropOpacity = useRef(new Animated.Value(0)).current;
+
+    React.useEffect(() => {
+        Animated.timing(backdropOpacity, {
+            toValue: payModalVisible ? 1 : 0,
+            duration: payModalVisible ? 220 : 160,
+            delay: payModalVisible ? 80 : 0,
+            useNativeDriver: true,
+        }).start();
+    }, [payModalVisible]);
 
     // Guard against concurrent fetches
     const isFetching = useRef(false);
@@ -569,132 +583,132 @@ const StudentDetailsScreen = ({ route, navigation }: any) => {
                 transparent={true}
                 onRequestClose={() => setPayModalVisible(false)}
             >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Record Payment</Text>
-                            <TouchableOpacity onPress={() => setPayModalVisible(false)}>
-                                <X size={24} color="#666" />
-                            </TouchableOpacity>
-                        </View>
-
-                        <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-                            <Text style={styles.inputLabel}>Amount to Pay (₹) *</Text>
-                            <TextInput
-                                style={styles.amountInput}
-                                value={payAmount}
-                                onChangeText={setPayAmount}
-                                keyboardType="numeric"
-                                placeholder="0.00"
-                            />
-
-                            <View style={styles.row}>
-                                <View style={{ flex: 1, marginRight: 8 }}>
-                                    <Text style={styles.inputLabel}>Payment Date *</Text>
-                                    <TouchableOpacity
-                                        style={styles.dateSelector}
-                                        onPress={() => setDatePickerVisibility(true)}
-                                    >
-                                        <Calendar size={18} color="#FF6B6B" />
-                                        <Text style={styles.dateText}>{payDate}</Text>
-                                    </TouchableOpacity>
-                                </View>
-                                <View style={{ flex: 1, marginLeft: 8 }}>
-                                    <Text style={styles.inputLabel}>Due Date *</Text>
-                                    <TouchableOpacity
-                                        style={styles.dateSelector}
-                                        onPress={() => setDueDatePickerVisibility(true)}
-                                    >
-                                        <Calendar size={18} color="#FF6B6B" />
-                                        <Text style={styles.dateText}>{payDueDate}</Text>
-                                    </TouchableOpacity>
-                                </View>
+                <View style={styles.modalRoot}>
+                    <Animated.View style={[styles.modalBackdrop, { opacity: backdropOpacity }]} />
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalContent}>
+                            <View style={styles.modalHandle} />
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>Record Payment</Text>
+                                <TouchableOpacity onPress={() => setPayModalVisible(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                                    <X size={20} color="#64748B" />
+                                </TouchableOpacity>
                             </View>
 
-                            <DateTimePickerModal
-                                isVisible={isDatePickerVisible}
-                                mode="date"
-                                onConfirm={handleConfirmDate}
-                                onCancel={() => setDatePickerVisibility(false)}
-                                date={new Date(payDate)}
-                            />
-                            <DateTimePickerModal
-                                isVisible={isDueDatePickerVisible}
-                                mode="date"
-                                onConfirm={handleConfirmDueDate}
-                                onCancel={() => setDueDatePickerVisibility(false)}
-                                date={new Date(payDueDate)}
-                            />
+                            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                                {student && (
+                                    <View style={styles.infoSummary}>
+                                        <View>
+                                            <Text style={styles.summaryName}>{student.first_name} {student.last_name}</Text>
+                                            <Text style={styles.summaryRoom}>Room {student.room_number || 'N/A'}</Text>
+                                        </View>
+                                        <View style={styles.summaryAmtBox}>
+                                            <Text style={styles.summaryAmtLabel}>DUE</Text>
+                                            <Text style={styles.summaryAmt}>₹{payAmount}</Text>
+                                        </View>
+                                    </View>
+                                )}
 
-                            <Text style={[styles.inputLabel, { marginTop: 12 }]}>Payment Mode *</Text>
-                            <View style={styles.verticalModeContainer}>
-                                {paymentModes.map((mode) => {
-                                    const mId = mode.payment_mode_id || mode.id;
-                                    const mName = mode.payment_mode_name || mode.name || 'Unknown';
-                                    const isSelected = payModeId === mId.toString();
-                                    return (
+                                <Text style={styles.inputLabel}>Amount to Pay (₹) *</Text>
+                                <TextInput
+                                    style={styles.amountInput}
+                                    value={payAmount}
+                                    onChangeText={setPayAmount}
+                                    keyboardType="numeric"
+                                    placeholder="0.00"
+                                />
+
+                                <View style={styles.row}>
+                                    <View style={{ flex: 1, marginRight: 8 }}>
+                                        <Text style={styles.inputLabel}>Payment Date *</Text>
                                         <TouchableOpacity
-                                            key={mId}
-                                            style={[styles.modeListItem, isSelected && styles.modeListItemActive]}
-                                            onPress={() => setPayModeId(mId.toString())}
+                                            style={styles.dateSelector}
+                                            onPress={() => setDatePickerVisibility(true)}
                                         >
-                                            <Text style={[
-                                                styles.modeListItemText,
-                                                isSelected && styles.modeListItemTextActive
-                                            ]}>
-                                                {mName}
-                                            </Text>
-                                            {isSelected && <CheckCircle color="#FF6B6B" size={18} />}
+                                            <Calendar size={14} color="#64748B" />
+                                            <Text style={styles.dateText}>{payDate}</Text>
                                         </TouchableOpacity>
-                                    );
-                                })}
-                            </View>
+                                    </View>
+                                    <View style={{ flex: 1, marginLeft: 8 }}>
+                                        <Text style={styles.inputLabel}>Due Date *</Text>
+                                        <TouchableOpacity
+                                            style={styles.dateSelector}
+                                            onPress={() => setDueDatePickerVisibility(true)}
+                                        >
+                                            <Calendar size={14} color="#64748B" />
+                                            <Text style={styles.dateText}>{payDueDate}</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
 
-                            <Text style={[styles.inputLabel, { marginTop: 12 }]}>Transaction ID (Optional)</Text>
-                            <TextInput
-                                style={styles.amountInput}
-                                value={payTransactionId}
-                                onChangeText={setPayTransactionId}
-                                placeholder="TXN123456"
-                            />
+                                <DateTimePickerModal
+                                    isVisible={isDatePickerVisible}
+                                    mode="date"
+                                    onConfirm={handleConfirmDate}
+                                    onCancel={() => setDatePickerVisibility(false)}
+                                    date={new Date(payDate)}
+                                />
+                                <DateTimePickerModal
+                                    isVisible={isDueDatePickerVisible}
+                                    mode="date"
+                                    onConfirm={handleConfirmDueDate}
+                                    onCancel={() => setDueDatePickerVisibility(false)}
+                                    date={new Date(payDueDate)}
+                                />
 
-                            <Text style={[styles.inputLabel, { marginTop: 12 }]}>Receipt Number (Optional)</Text>
-                            <TextInput
-                                style={styles.amountInput}
-                                value={payReceiptNumber}
-                                onChangeText={setPayReceiptNumber}
-                                placeholder="REC-789"
-                            />
+                                <Text style={[styles.inputLabel, { marginTop: 12 }]}>Payment Mode *</Text>
+                                <View style={styles.modeRow}>
+                                    {paymentModes.map((mode) => {
+                                        const mId = mode.payment_mode_id || mode.id;
+                                        const mName = mode.payment_mode_name || mode.name || 'Cash';
+                                        const isSelected = payModeId === mId.toString();
+                                        return (
+                                            <TouchableOpacity
+                                                key={mId}
+                                                style={[styles.modeChip, isSelected && { backgroundColor: theme.primary, borderColor: theme.primary }]}
+                                                onPress={() => setPayModeId(mId.toString())}
+                                            >
+                                                <Text style={[
+                                                    styles.modeText,
+                                                    isSelected && { color: '#FFF' }
+                                                ]}>
+                                                    {mName}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
+                                </View>
 
-                            <Text style={[styles.inputLabel, { marginTop: 12 }]}>Reason (Optional)</Text>
-                            <TextInput
-                                style={styles.amountInput}
-                                value={payReason}
-                                onChangeText={setPayReason}
-                                placeholder="e.g. Monthly Fee, Security Deposit"
-                            />
+                                <Text style={[styles.inputLabel, { marginTop: 12 }]}>Transaction ID (Optional)</Text>
+                                <TextInput
+                                    style={styles.amountInput}
+                                    value={payTransactionId}
+                                    onChangeText={setPayTransactionId}
+                                    placeholder="e.g. UPI-123456"
+                                />
 
-                            <Text style={[styles.inputLabel, { marginTop: 12 }]}>Notes</Text>
-                            <TextInput
-                                style={[styles.notesInput, { height: 80 }]}
-                                value={payNotes}
-                                onChangeText={setPayNotes}
-                                multiline={true}
-                                placeholder="Add optional notes..."
-                                textAlignVertical="top"
-                            />
+                                <Text style={[styles.inputLabel, { marginTop: 12 }]}>Notes</Text>
+                                <TextInput
+                                    style={[styles.notesInput, { height: 64, textAlignVertical: 'top' }]}
+                                    value={payNotes}
+                                    onChangeText={setPayNotes}
+                                    multiline={true}
+                                    placeholder="Any Remarks..."
+                                />
 
-                            <TouchableOpacity
-                                style={[styles.submitButton, payLoading && styles.disabledButton]}
-                                onPress={handleRecordPayment}
-                                disabled={payLoading}
-                            >
-                                {payLoading
-                                    ? <ActivityIndicator color="#FFF" />
-                                    : <Text style={styles.submitButtonText}>Submit Payment</Text>
-                                }
-                            </TouchableOpacity>
-                        </ScrollView>
+                                <TouchableOpacity
+                                    style={[styles.submitButton, { backgroundColor: theme.primary }, payLoading && styles.disabledButton]}
+                                    onPress={handleRecordPayment}
+                                    disabled={payLoading}
+                                >
+                                    {payLoading
+                                        ? <ActivityIndicator color="#FFF" />
+                                        : <Text style={styles.submitButtonText}>SUBMIT PAYMENT</Text>
+                                    }
+                                </TouchableOpacity>
+                                <View style={{ height: 40 }} />
+                            </ScrollView>
+                        </View>
                     </View>
                 </View>
             </Modal>
@@ -764,25 +778,32 @@ const styles = StyleSheet.create({
     rentValue: { fontSize: 24, fontWeight: '800', color: '#1E293B' },
     payButton: { backgroundColor: '#FF6B6B', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
     payButtonText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-    modalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, maxHeight: '80%' },
-    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-    modalTitle: { fontSize: 20, fontWeight: '700', color: '#1E293B' },
+    modalRoot: { flex: 1 },
+    modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)', zIndex: 0 },
+    modalOverlay: { flex: 1, justifyContent: 'flex-end', zIndex: 1 },
+    modalContent: { backgroundColor: '#FFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingBottom: 0, maxHeight: '90%' },
+    modalHandle: { width: 40, height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 16 },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+    modalTitle: { fontSize: 18, fontWeight: '900', color: '#1E293B' },
+    infoSummary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, backgroundColor: '#F8FAFC', padding: 14, borderRadius: 14 },
+    summaryName: { fontSize: 15, fontWeight: '800', color: '#1E293B' },
+    summaryRoom: { fontSize: 12, color: '#94A3B8', fontWeight: '600', marginTop: 2 },
+    summaryAmtBox: { alignItems: 'flex-end' },
+    summaryAmtLabel: { fontSize: 9, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.5, marginBottom: 2 },
+    summaryAmt: { fontSize: 20, fontWeight: '900', color: '#EF4444' },
+    inputLabel: { fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 6, marginTop: 12 },
+    amountInput: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, padding: 13, fontSize: 15, color: '#1E293B', fontWeight: '600' },
+    dateSelector: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, padding: 12, gap: 8 },
+    dateText: { fontSize: 13, fontWeight: '600', color: '#1E293B' },
+    modeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+    modeChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#FFF' },
+    modeText: { fontSize: 12, fontWeight: '700', color: '#64748B' },
+    notesInput: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, padding: 13, fontSize: 15, color: '#1E293B', fontWeight: '600' },
+    submitButton: { height: 52, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginTop: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 },
+    submitButtonText: { color: '#FFF', fontWeight: '800', fontSize: 14, letterSpacing: 0.8 },
+    disabledButton: { opacity: 0.6 },
     modalBody: { gap: 8 },
-    inputLabel: { fontSize: 14, fontWeight: '600', color: '#64748B' },
-    amountInput: { backgroundColor: '#F1F5F9', borderRadius: 12, padding: 16, fontSize: 18, fontWeight: '600', color: '#1E293B' },
-    notesInput: { backgroundColor: '#F1F5F9', borderRadius: 12, padding: 16, fontSize: 16, color: '#1E293B' },
-    submitButton: { backgroundColor: '#FF6B6B', padding: 18, borderRadius: 12, alignItems: 'center', marginTop: 16 },
-    disabledButton: { backgroundColor: '#FF6B6B80' },
-    submitButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
     row: { flexDirection: 'row', marginTop: 12 },
-    dateSelector: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F1F5F9', padding: 12, borderRadius: 10, marginTop: 6 },
-    dateText: { fontSize: 14, color: '#1E293B', fontWeight: '600' },
-    verticalModeContainer: { flexDirection: 'column', gap: 8, marginTop: 8 },
-    modeListItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' },
-    modeListItemActive: { backgroundColor: '#FFF1F1', borderColor: '#FF6B6B' },
-    modeListItemText: { fontSize: 14, fontWeight: '500', color: '#64748B' },
-    modeListItemTextActive: { color: '#FF6B6B', fontWeight: '700' },
 });
 
 export default StudentDetailsScreen;

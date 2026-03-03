@@ -158,7 +158,7 @@ export default function IncomeDetailsScreen() {
                 return;
             }
 
-            const baseURL = (api.defaults.baseURL || 'http://192.168.1.4:5000/api').replace(/\/$/, '');
+            const baseURL = (api.defaults.baseURL || 'https://mhostel-backend.onrender.com/api').replace(/\/$/, '');
             // all=true tells backend to return ALL records without pagination
             const exportUrl = `${baseURL}/income/export?startDate=${startStr}&endDate=${endStr}&token=${encodeURIComponent(token)}&all=true`;
 

@@ -338,9 +338,15 @@ export const StudentsScreen = ({ navigation }: any) => {
                             });
                             if (res.data.success) {
                                 // Update local state for immediate feedback
-                                setAllStudents(prev => prev.map(s =>
-                                    s.student_id === student.student_id ? { ...s, status: isCurrentlyActive ? 0 : 1 } : s
-                                ));
+                                setAllStudents(prev => {
+                                    // If we are in "All" tab, just update the status
+                                    if (activeTab === 'All') {
+                                        return prev.map(s => s.student_id === student.student_id ? { ...s, status: isCurrentlyActive ? 0 : 1 } : s);
+                                    }
+                                    // Otherwise, filter them out because they no longer belong in this tab
+                                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                                    return prev.filter(s => s.student_id !== student.student_id);
+                                });
                                 fetchCounts(); // Update tab counts
                                 Toast.show({ type: 'success', text1: 'Status Updated' });
                             }
@@ -351,7 +357,7 @@ export const StudentsScreen = ({ navigation }: any) => {
                 }
             ]
         );
-    }, []);
+    }, [activeTab]);
 
     const handleCall = useCallback((phone: string) => {
         Linking.openURL(`tel:${phone}`);

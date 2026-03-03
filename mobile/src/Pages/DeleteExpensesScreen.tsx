@@ -7,8 +7,15 @@ import {
     TouchableOpacity,
     Alert,
     ActivityIndicator,
-    TextInput
+    TextInput,
+    LayoutAnimation,
+    Platform,
+    UIManager
 } from 'react-native';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, Trash2, Search } from 'lucide-react-native';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -57,12 +64,13 @@ const DeleteExpensesScreen = ({ navigation }: any) => {
                         try {
                             const response = await api.delete(`/expenses/${expense.expense_id}`);
                             if (response.data.success) {
+                                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                                setExpenses(prev => prev.filter(e => e.expense_id !== expense.expense_id));
                                 Toast.show({
                                     type: 'success',
                                     text1: 'Deleted',
                                     text2: `Expense deleted successfully`
                                 });
-                                fetchExpenses();
                             } else {
                                 Toast.show({
                                     type: 'error',

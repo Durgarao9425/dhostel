@@ -6,7 +6,7 @@ import {
     Animated
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Search, MessageCircle, X, TrendingUp, TrendingDown, ChevronRight, ChevronLeft, Calendar, Tag, Plus, Receipt } from 'lucide-react-native';
+import { Search, MessageCircle, X, TrendingUp, TrendingDown, ChevronRight, ChevronLeft, Calendar, Tag, Plus, Receipt, Trash2 } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import DateTimePickerModal from "react-native-modal-datetime-picker";
@@ -14,6 +14,7 @@ import api from '../services/api';
 import { HeaderNotification } from '../components/HeaderNotification';
 import { ProfileMenu } from '../components/ProfileMenu';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -191,7 +192,12 @@ const ExpenseCard = React.memo(({ item, onPress }: { item: any; onPress: (i: any
                 </View>
                 <View style={C.expRight}>
                     <Text style={C.expAmountText}>₹{amt.toLocaleString('en-IN')}</Text>
-                    <ChevronRight size={16} color="#94A3B8" />
+                    <TouchableOpacity
+                        style={{ marginLeft: 10, padding: 8 }}
+                        onPress={() => (onPress as any).onDelete ? (onPress as any).onDelete(item) : null}
+                    >
+                        <Trash2 size={16} color="#EF4444" />
+                    </TouchableOpacity>
                 </View>
             </View>
         </TouchableOpacity>
@@ -384,6 +390,7 @@ const CollectDrawer = React.memo(({
 // ─────────────────────────────────────────────────────────────────────────────
 export default function FinanceScreen() {
     const { theme } = useTheme();
+    const { user } = useAuth();
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
 
@@ -538,6 +545,36 @@ export default function FinanceScreen() {
     const handleWhatsApp = useCallback((phone: string, name: string, due: number) => {
         Linking.openURL(`whatsapp://send?phone=91${phone}&text=Hi ${name}, your rent balance ₹${due} is pending.`);
     }, []);
+    const handleDeleteExpense = useCallback(async (expense: any) => {
+        Alert.alert(
+            'Delete Expense',
+            `Are you sure you want to delete this expense of ₹${expense.amount}?`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            const res = await api.delete(`/expenses/${expense.expense_id}`);
+                            if (res.data.success) {
+                                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                                setExpenses(prev => {
+                                    const next = prev.filter(e => (e.expense_id || e.id) !== (expense.expense_id || expense.id));
+                                    STORE.expenses = next;
+                                    return next;
+                                });
+                                Toast.show({ type: 'success', text1: 'Expense Deleted' });
+                            }
+                        } catch (e: any) {
+                            Alert.alert('Error', e.response?.data?.error || 'Failed to delete expense');
+                        }
+                    }
+                }
+            ]
+        );
+    }, []);
+
     const handleExpensePress = useCallback((item: any) => navigation.navigate('ExpenseDetails', { expense: item }), [navigation]);
 
     const openCollectModal = useCallback((item: any) => {
@@ -584,8 +621,40 @@ export default function FinanceScreen() {
                     text1: '✓ Payment Collected!',
                     text2: `₹${payAmount} recorded for ${selectedFee.first_name}`,
                 });
+
+                // INSTANT FEEDBACK: Update local list immediately
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                setFees(prev => {
+                    const next = prev.map(f => {
+                        if (f.student_id === selectedFee.student_id) {
+                            const paidNow = parseFloat(payAmount);
+                            const oldPaid = sf(f.amount_paid || f.paid_amount);
+                            const total = sf(f.total_amount || f.total_due || f.monthly_rent);
+                            const newPaid = oldPaid + paidNow;
+                            const newDue = Math.max(0, total - newPaid);
+                            let newStatus = 'Partially Paid';
+                            if (newDue <= 0) newStatus = 'Fully Paid';
+                            return { ...f, amount_paid: newPaid, paid_amount: newPaid, balance: newDue, fee_status: newStatus };
+                        }
+                        return f;
+                    });
+                    STORE.fees = next;
+                    return next;
+                });
+
+                setSummary((prev: any) => {
+                    if (!prev) return prev;
+                    const paidNow = parseFloat(payAmount);
+                    return {
+                        ...prev,
+                        total_paid: sf(prev.total_paid) + paidNow,
+                        total_pending: Math.max(0, sf(prev.total_pending) - paidNow)
+                    };
+                });
+
                 STORE.dirty = true;
-                setTimeout(() => fetchData(true), 600);
+                // Silent fetch after animation completes
+                setTimeout(() => fetchData(false), 2000);
             }
         } catch (e: any) {
             console.error('Collect error:', e);
@@ -598,6 +667,36 @@ export default function FinanceScreen() {
             setPayLoading(false);
         }
     }, [payAmount, payDate, payModeId, payNotes, payTransactionId, payDueDate, selectedFee, monthStr, fetchData]);
+
+    const handleCloneExpenses = useCallback(async () => {
+        Alert.alert(
+            'Import Last Month Expenses?',
+            'This will copy all common expenses (bills, staff salaries, etc.) from the previous month to this month. It only works if this month is currently empty.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Import',
+                    onPress: async () => {
+                        try {
+                            setInitialLoading(true);
+                            const res = await api.post('/expenses/clone-previous', {
+                                targetDate: monthStr + '-01',
+                                hostel_id: user?.hostel_id
+                            });
+                            if (res.data.success) {
+                                Toast.show({ type: 'success', text1: 'Expenses Imported', text2: res.data.message });
+                                fetchData(true);
+                            }
+                        } catch (e: any) {
+                            Alert.alert('Import Failed', e.response?.data?.error || 'No expenses found in previous month.');
+                        } finally {
+                            setInitialLoading(false);
+                        }
+                    }
+                }
+            ]
+        );
+    }, [monthStr, fetchData, user]);
 
     const totalDebt = useMemo(() =>
         fees.reduce((s, f) => s + Math.max(0, sf(f.total_amount || f.total_due || f.monthly_rent) - sf(f.amount_paid || f.paid_amount)), 0),
@@ -652,8 +751,8 @@ export default function FinanceScreen() {
     ), [theme.primary, handleNavigate, openCollectModal, handleWhatsApp]);
 
     const renderExpenseItem = useCallback(({ item }: { item: any }) => (
-        <ExpenseCard item={item} onPress={handleExpensePress} />
-    ), [handleExpensePress]);
+        <ExpenseCard item={item} onPress={Object.assign(() => handleExpensePress(item), { onDelete: handleDeleteExpense })} />
+    ), [handleExpensePress, handleDeleteExpense]);
 
     // Count badges for each filter tab
     const unpaidCount = useMemo(() => fees.filter(f => {
@@ -842,6 +941,14 @@ export default function FinanceScreen() {
                                             ? `No ${statusFilter.toLowerCase()} records found`
                                             : 'No expenses found'}
                                     </Text>
+                                    {mode === 'Expense' && !search && (
+                                        <TouchableOpacity
+                                            style={[S.retryBtn, { backgroundColor: theme.primary, borderColor: theme.primary, marginTop: 24, paddingHorizontal: 24 }]}
+                                            onPress={handleCloneExpenses}
+                                        >
+                                            <Text style={[S.retryText, { color: '#FFF' }]}>Import from Last Month</Text>
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                             ) : null
                         }
@@ -862,7 +969,7 @@ export default function FinanceScreen() {
             )}
 
             {mode === 'Expense' && (
-                <TouchableOpacity style={[S.fab, { backgroundColor: '#F59E0B' }]}
+                <TouchableOpacity style={[S.fab, { backgroundColor: theme.primary }]}
                     onPress={() => navigation.navigate('AddExpense')} activeOpacity={0.85}>
                     <Plus color="#FFF" size={26} />
                 </TouchableOpacity>
@@ -968,6 +1075,8 @@ const S = StyleSheet.create({
     emptyText: { fontSize: 14, color: '#94A3B8', fontWeight: '600', textAlign: 'center' },
     clearDateBtn: { marginTop: 8, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#FEE2E2', borderRadius: 10 },
     clearDateText: { fontSize: 13, color: '#EF4444', fontWeight: '700' },
+    retryBtn: { paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+    retryText: { fontSize: 14, fontWeight: '800' },
     fab: { position: 'absolute', bottom: 130, right: 20, width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', elevation: 10, zIndex: 999 },
 
     // Month-change loading overlay
