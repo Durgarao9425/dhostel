@@ -12,7 +12,10 @@ import {
 
 const router = express.Router();
 
-// All routes require authentication
+// Publicly accessible via query token (for Excel download)
+router.get('/export', queryTokenMiddleware, getIncomeExport);
+
+// All other routes require authentication via header
 router.use(authMiddleware);
 
 // Income routes
@@ -22,6 +25,5 @@ router.put('/:incomeId', updateIncome);
 router.delete('/:incomeId', deleteIncome);
 router.get('/summary', getIncomeSummary);
 router.get('/analytics', getIncomeAnalytics);
-router.get('/export', queryTokenMiddleware, getIncomeExport);
 
 export default router;

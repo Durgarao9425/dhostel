@@ -7,7 +7,8 @@ import {
   updateExpense,
   deleteExpense,
   getExpenseCategories,
-  getExpenseSummary
+  getExpenseSummary,
+  cloneExpenses
 } from '../controllers/expenseController.js';
 
 const router = express.Router();
@@ -17,6 +18,7 @@ router.use(authMiddleware);
 
 // Expense routes
 router.get('/', getExpenses);
+router.post('/clone-previous', cloneExpenses);
 router.get('/categories', getExpenseCategories);
 router.get('/summary', getExpenseSummary);
 router.get('/:expenseId', getExpenseById);

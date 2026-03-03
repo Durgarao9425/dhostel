@@ -301,7 +301,7 @@ export const getExpenseCategories = async (req: AuthRequest, res: Response) => {
       // Determine which column exists
       const hasOrderIndex = columns.some((col: any) => col.COLUMN_NAME === 'order_index');
       const orderColumn = hasOrderIndex ? 'order_index' : 'sort_order';
-      
+
       // Order by order_index/sort_order first (using COALESCE to handle NULLs), then by category_name
       categories = await db('expense_categories')
         .select('*')
@@ -374,5 +374,87 @@ export const getExpenseSummary = async (req: AuthRequest, res: Response) => {
       success: false,
       error: 'Failed to fetch expense summary'
     });
+  }
+};
+// Clone expenses from previous month
+export const cloneExpenses = async (req: AuthRequest, res: Response) => {
+  try {
+    const user = req.user;
+    const { targetDate } = req.body; // YYYY-MM-DD
+
+    if (!targetDate) {
+      return res.status(400).json({ success: false, error: 'targetDate is required' });
+    }
+
+    let hostel_id: number;
+    if (user?.role_id === 2) {
+      if (!user.hostel_id) return res.status(403).json({ success: false, error: 'Not linked to a hostel' });
+      hostel_id = user.hostel_id;
+    } else {
+      hostel_id = parseInt(req.body.hostel_id);
+      if (!hostel_id) return res.status(400).json({ success: false, error: 'hostel_id is required' });
+    }
+
+    // Calculate previous month range
+    const target = new Date(targetDate);
+    const targetMonthStr = `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}`;
+
+    // Check if target month already has expenses
+    const existingCount = await db('expenses')
+      .where('hostel_id', hostel_id)
+      .whereRaw('DATE_FORMAT(expense_date, "%Y-%m") = ?', [targetMonthStr])
+      .count('expense_id as count')
+      .first();
+
+    if (existingCount && (existingCount as any).count > 0) {
+      return res.status(400).json({ success: false, error: 'Target month already has expenses recorded.' });
+    }
+
+    const prevMonthDate = new Date(target.getFullYear(), target.getMonth() - 1, 1);
+    const prevMonthStr = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
+
+    const prevExpenses = await db('expenses')
+      .where('hostel_id', hostel_id)
+      .whereRaw('DATE_FORMAT(expense_date, "%Y-%m") = ?', [prevMonthStr]);
+
+    if (prevExpenses.length === 0) {
+      return res.status(404).json({ success: false, error: 'No expenses found in previous month to copy.' });
+    }
+
+    const newExpenses = prevExpenses.map(exp => {
+      // Set date to the same day in target month
+      const expDate = new Date(exp.expense_date);
+      const newDate = new Date(target.getFullYear(), target.getMonth(), expDate.getDate());
+
+      // Handle end of month issues
+      if (newDate.getMonth() !== target.getMonth()) {
+        // Day doesn't exist (e.g. Feb 30), use last day of target month
+        newDate.setDate(0);
+      }
+
+      return {
+        hostel_id: exp.hostel_id,
+        category_id: exp.category_id,
+        expense_date: newDate.toISOString().split('T')[0],
+        amount: exp.amount,
+        payment_mode_id: exp.payment_mode_id,
+        vendor_name: exp.vendor_name,
+        description: exp.description ? `(Copied) ${exp.description}` : 'Copied from last month',
+        bill_number: null, // Reset bill number
+        created_by: user?.user_id,
+        created_at: new Date()
+      };
+    });
+
+    await db('expenses').insert(newExpenses);
+
+    res.json({
+      success: true,
+      message: `Successfully cloned ${newExpenses.length} expenses from ${prevMonthStr}.`,
+      count: newExpenses.length
+    });
+  } catch (error) {
+    console.error('Clone expenses error:', error);
+    res.status(500).json({ success: false, error: 'Failed to clone expenses' });
   }
 };

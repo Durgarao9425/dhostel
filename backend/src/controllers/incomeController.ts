@@ -506,7 +506,7 @@ export const getIncomeExport = async (req: AuthRequest, res: Response) => {
     expenses.forEach(exp => {
       expSheet.addRow({
         date: exp.expense_date,
-        title: exp.title,
+        title: exp.vendor_name || 'Expense',
         category: exp.category_name,
         amount: parseFloat(exp.amount),
         details: exp.description || '-'
