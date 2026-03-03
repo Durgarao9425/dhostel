@@ -425,6 +425,37 @@ export const getMonthlyFeesSummary = async (req: AuthRequest, res: Response) => 
       `);
       monthlyFeesTableExists = tableCheck[0]?.count > 0;
       console.log('[getMonthlyFeesSummary] monthly_fees table exists:', monthlyFeesTableExists);
+
+      // --- SELF-HEALING LOGIC ---
+      // If we are in the current month, look for records that were created with 0 rent 
+      // and no payments, and delete them so they are recalculated correctly.
+      if (monthlyFeesTableExists) {
+        try {
+          const now = new Date();
+          const currentMonthActual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+          if (currentMonth === currentMonthActual) {
+            const deletedCount = await db('monthly_fees as mf')
+              .where({
+                fee_month: currentMonth,
+                monthly_rent: 0,
+                paid_amount: 0,
+                carry_forward: 0
+              })
+              .whereNotExists(function () {
+                this.select('*').from('fee_payments').whereRaw('fee_payments.fee_id = mf.fee_id');
+              })
+              .del();
+
+            if (deletedCount > 0) {
+              console.log(`[getMonthlyFeesSummary] Self-healed ${deletedCount} incorrect 0-rent records for ${currentMonth}`);
+            }
+          }
+        } catch (healError) {
+          console.warn('[getMonthlyFeesSummary] Self-healing failed:', healError);
+        }
+      }
+      // --------------------------
     } catch (error) {
       console.warn('[getMonthlyFeesSummary] Could not check if monthly_fees table exists:', error);
       monthlyFeesTableExists = false;

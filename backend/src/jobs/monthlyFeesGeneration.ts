@@ -26,15 +26,15 @@ const generateMonthlyFeesForHostel = async (hostel_id: number, fee_month: string
     console.log(`[Monthly Fees Cron] Generating fees for hostel ${hostel_id}, month: ${fee_month}`);
 
     // Get all active students with current room allocations
-    const students: Student[] = await db('students as s')
+    const students: any[] = await db('students as s')
+      .leftJoin('rooms as r', 's.room_id', 'r.room_id')
       .where('s.hostel_id', hostel_id)
       .where('s.status', 1)
       .whereNotNull('s.room_id')
-      .whereNotNull('s.monthly_rent')
       .select(
         's.student_id',
         's.hostel_id',
-        's.monthly_rent'
+        db.raw('COALESCE(s.monthly_rent, r.rent_per_bed, 0) as student_monthly_rent')
       );
 
     if (students.length === 0) {
@@ -100,7 +100,7 @@ const generateMonthlyFeesForHostel = async (hostel_id: number, fee_month: string
           .first();
 
         const admDate = studentData?.admission_date ? new Date(studentData.admission_date) : null;
-        const studentRent = student.monthly_rent || 0;
+        const studentRent = parseFloat(student.student_monthly_rent || 0);
 
         if (prevMonthFee) {
           const payments = await db('fee_payments')
@@ -155,7 +155,7 @@ const generateMonthlyFeesForHostel = async (hostel_id: number, fee_month: string
         if (carryForward > 0) totalCarryForward++;
 
         // Step 2: Get student's current monthly rent
-        const monthlyRent = student.monthly_rent || 0;
+        const monthlyRent = parseFloat(student.student_monthly_rent || 0);
 
         // Step 3: Calculate totals
         const totalDue = monthlyRent + carryForward;
