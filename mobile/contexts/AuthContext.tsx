@@ -59,6 +59,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     loadUser();
+
+    // Register 401 interceptor callback
+    const { setLogoutCallback } = require('../src/services/api');
+    setLogoutCallback(() => {
+      setUser(null);
+    });
   }, []);
 
   const signIn = async (identifier: string, password: string) => {

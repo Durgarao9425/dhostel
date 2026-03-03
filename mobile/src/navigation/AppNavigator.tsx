@@ -79,59 +79,66 @@ import { useNavigationContainerRef } from '@react-navigation/native';
 
 // ... (other imports)
 
+import { useAuth } from '../../contexts/AuthContext';
+
 const AppNavigator = () => {
     const navigationRef = useNavigationContainerRef();
+    const { user, loading } = useAuth();
 
-    // React.useEffect(() => {
-    //     // Setup notification listeners
-    //     const cleanup = notificationService.setupNotificationListeners((screen, params) => {
-    //         if (navigationRef.isReady()) {
-    //             // @ts-ignore - Dynamic navigation
-    //             navigationRef.navigate(screen, params);
-    //         }
-    //     });
-    //     return cleanup;
-    // }, [navigationRef]);
+    if (loading) {
+        return (
+            <NavigationContainer ref={navigationRef}>
+                <Stack.Navigator screenOptions={{ headerShown: false }}>
+                    <Stack.Screen name="Splash" component={SplashScreen} />
+                </Stack.Navigator>
+            </NavigationContainer>
+        );
+    }
 
     return (
         <NavigationContainer ref={navigationRef}>
-            <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Splash">
+            <Stack.Navigator screenOptions={{ headerShown: false }}>
+                {!user ? (
+                    <>
+                        <Stack.Screen name="Login" component={LoginScreen} />
+                    </>
+                ) : (
+                    <>
+                        <Stack.Screen name="Main" component={TabNavigator} />
+                        <Stack.Screen name="StudentDetails" component={StudentDetailsScreen} />
+                        <Stack.Screen
+                            name="AddStudent"
+                            component={AddStudentScreen}
+                            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+                        />
+                        <Stack.Screen name="RoomDetails" component={RoomDetailsScreen} />
+                        <Stack.Screen
+                            name="AddRoom"
+                            component={AddRoomScreen}
+                            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+                        />
+                        <Stack.Screen name="PaymentDetails" component={PaymentDetailsScreen} />
+                        <Stack.Screen name="Profile" component={ProfileScreen} />
+                        <Stack.Screen name="Expenses" component={ExpenseScreen} />
+                        <Stack.Screen name="AddExpense" component={AddExpenseScreen} />
+                        <Stack.Screen name="ExpenseDetails" component={ExpenseDetailsScreen} />
+                        <Stack.Screen name="FeeManagement" component={FeeCollectionScreen} />
 
-                <Stack.Screen name="Splash" component={SplashScreen} />
-                <Stack.Screen name="Login" component={LoginScreen} />
-                <Stack.Screen name="Main" component={TabNavigator} />
-                <Stack.Screen name="StudentDetails" component={StudentDetailsScreen} />
-                <Stack.Screen
-                    name="AddStudent"
-                    component={AddStudentScreen}
-                    options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-                />
-                <Stack.Screen name="RoomDetails" component={RoomDetailsScreen} />
-                <Stack.Screen
-                    name="AddRoom"
-                    component={AddRoomScreen}
-                    options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-                />
-                <Stack.Screen name="PaymentDetails" component={PaymentDetailsScreen} />
-                <Stack.Screen name="Profile" component={ProfileScreen} />
-                <Stack.Screen name="Expenses" component={ExpenseScreen} />
-                <Stack.Screen name="AddExpense" component={AddExpenseScreen} />
-                <Stack.Screen name="ExpenseDetails" component={ExpenseDetailsScreen} />
-                <Stack.Screen name="FeeManagement" component={FeeCollectionScreen} />
-
-                <Stack.Screen name="Settings" component={SettingsScreen} />
-                <Stack.Screen name="Receipt" component={ReceiptScreen} />
-                <Stack.Screen name="Income" component={IncomeScreen} />
-                <Stack.Screen name="IncomeDetails" component={IncomeDetailsScreen} />
-                <Stack.Screen name="AddIncome" component={AddIncomeScreen} />
-                <Stack.Screen name="Reports" component={PlaceholderScreen} initialParams={{ title: 'Analytics & Reports' }} />
-                <Stack.Screen name="PersonalInfo" component={PlaceholderScreen} initialParams={{ title: 'Personal Information' }} />
-                <Stack.Screen name="Themes" component={PlaceholderScreen} initialParams={{ title: 'Theme Settings' }} />
-                <Stack.Screen name="Rooms" component={RoomsScreen} />
-                <Stack.Screen name="Maintenance" component={MaintenanceScreen} />
-                <Stack.Screen name="DeleteRooms" component={DeleteRoomsScreen} />
-                <Stack.Screen name="DeleteExpenses" component={DeleteExpensesScreen} />
-                <Stack.Screen name="TenantQR" component={TenantQRScreen} />
+                        <Stack.Screen name="Settings" component={SettingsScreen} />
+                        <Stack.Screen name="Receipt" component={ReceiptScreen} />
+                        <Stack.Screen name="Income" component={IncomeScreen} />
+                        <Stack.Screen name="IncomeDetails" component={IncomeDetailsScreen} />
+                        <Stack.Screen name="AddIncome" component={AddIncomeScreen} />
+                        <Stack.Screen name="Reports" component={PlaceholderScreen} initialParams={{ title: 'Analytics & Reports' }} />
+                        <Stack.Screen name="PersonalInfo" component={PlaceholderScreen} initialParams={{ title: 'Personal Information' }} />
+                        <Stack.Screen name="Themes" component={PlaceholderScreen} initialParams={{ title: 'Theme Settings' }} />
+                        <Stack.Screen name="Rooms" component={RoomsScreen} />
+                        <Stack.Screen name="Maintenance" component={MaintenanceScreen} />
+                        <Stack.Screen name="DeleteRooms" component={DeleteRoomsScreen} />
+                        <Stack.Screen name="DeleteExpenses" component={DeleteExpensesScreen} />
+                        <Stack.Screen name="TenantQR" component={TenantQRScreen} />
+                    </>
+                )}
             </Stack.Navigator>
         </NavigationContainer>
     );

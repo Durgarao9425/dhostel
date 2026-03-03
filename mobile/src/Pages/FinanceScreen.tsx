@@ -199,6 +199,61 @@ const ExpenseCard = React.memo(({ item, onPress }: { item: any; onPress: (i: any
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+//  DATE PICKER MODAL WITH TODAY BUTTON
+// ─────────────────────────────────────────────────────────────────────────────
+const DatePickerWithToday = React.memo(({
+    isVisible,
+    currentDate,
+    onConfirm,
+    onCancel,
+    themeColor,
+}: {
+    isVisible: boolean;
+    currentDate: Date;
+    onConfirm: (date: Date) => void;
+    onCancel: () => void;
+    themeColor: string;
+}) => {
+    const today = new Date();
+    const isToday =
+        currentDate.getDate() === today.getDate() &&
+        currentDate.getMonth() === today.getMonth() &&
+        currentDate.getFullYear() === today.getFullYear();
+
+    return (
+        <>
+            <DateTimePickerModal
+                isVisible={isVisible}
+                mode="date"
+                date={currentDate}
+                onConfirm={onConfirm}
+                onCancel={onCancel}
+            // Inject a "Today" button via customHeaderIOS / display
+            // For cross-platform, we overlay a Today pill on top of the modal
+            />
+            {/* TODAY quick-tap overlay — renders above the native picker backdrop */}
+            {isVisible && (
+                <Modal visible transparent animationType="fade" onRequestClose={onCancel}>
+                    <View style={DP.overlay} pointerEvents="box-none">
+                        <View style={DP.todayContainer} pointerEvents="auto">
+                            <TouchableOpacity
+                                style={[DP.todayBtn, isToday && { backgroundColor: themeColor }]}
+                                activeOpacity={0.85}
+                                onPress={() => onConfirm(new Date())}
+                            >
+                                <Text style={[DP.todayText, isToday && { color: '#FFF' }]}>
+                                    {isToday ? '✓ Today' : 'Today'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </Modal>
+            )}
+        </>
+    );
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 //  COLLECT DRAWER
 // ─────────────────────────────────────────────────────────────────────────────
 const CollectDrawer = React.memo(({
@@ -339,6 +394,8 @@ export default function FinanceScreen() {
     const [expenses, setExpenses] = useState<any[]>(() => STORE.expenses);
     const [paymentModes, setPaymentModes] = useState<any[]>(() => STORE.modes);
     const [initialLoading, setInitialLoading] = useState(() => STORE.fees.length === 0);
+    // NEW: month-change loading state so users see feedback when switching months
+    const [monthLoading, setMonthLoading] = useState(false);
     const [summary, setSummary] = useState<any>(null);
     const [refreshing, setRefreshing] = useState(false);
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -367,7 +424,7 @@ export default function FinanceScreen() {
         setMonthStr(`${y}-${m}`);
     }, [currentDate]);
 
-    const fetchData = useCallback(async (isRefresh = false) => {
+    const fetchData = useCallback(async (isRefresh = false, isMonthChange = false) => {
         if (fetchingRef.current) return;
         // Construct YYYY-MM
         const y = currentDate.getFullYear();
@@ -383,8 +440,14 @@ export default function FinanceScreen() {
 
         fetchingRef.current = true;
         try {
-            if (isRefresh) setRefreshing(true);
-            else if (STORE.fees.length === 0) setInitialLoading(true);
+            if (isRefresh) {
+                setRefreshing(true);
+            } else if (isMonthChange) {
+                // Show month-change loader (keeps old list visible with overlay)
+                setMonthLoading(true);
+            } else if (STORE.fees.length === 0) {
+                setInitialLoading(true);
+            }
 
             // Calculate start/end dates for expenses
             const startDate = `${currentMonthStr}-01`;
@@ -435,6 +498,7 @@ export default function FinanceScreen() {
         } finally {
             fetchingRef.current = false;
             setInitialLoading(false);
+            setMonthLoading(false);
             setRefreshing(false);
         }
     }, [currentDate]);
@@ -448,8 +512,19 @@ export default function FinanceScreen() {
         return () => task.cancel();
     }, [fetchData, currentDate]));
 
-    // Current Date Logic removed redirection as per request
-
+    // When currentDate changes (month switch), trigger a month-change fetch with loader
+    const prevDateRef = useRef(currentDate);
+    useEffect(() => {
+        const prev = prevDateRef.current;
+        const didMonthChange =
+            prev.getMonth() !== currentDate.getMonth() ||
+            prev.getFullYear() !== currentDate.getFullYear();
+        if (didMonthChange) {
+            prevDateRef.current = currentDate;
+            STORE.dirty = true;
+            fetchData(false, true); // isMonthChange = true → shows monthLoading overlay
+        }
+    }, [currentDate, fetchData]);
 
     const shiftMonth = useCallback((delta: number) => {
         const d = new Date(currentDate);
@@ -568,9 +643,6 @@ export default function FinanceScreen() {
         });
     }, [mode, statusFilter, fees, expenses, search]);
 
-    // Debug log — remove after testing
-    // console.log('fees total:', fees.length, 'filtered:', filteredData.length, 'statusFilter:', statusFilter);
-
     const rentKeyExtractor = useCallback((item: any) => `s${item.student_id}`, []);
     const expenseKeyExtractor = useCallback((item: any) => `e${item.expense_id ?? item.id}`, []);
 
@@ -600,6 +672,13 @@ export default function FinanceScreen() {
         const due = Math.max(0, sf(f.total_amount || f.total_due || f.monthly_rent) - sf(f.amount_paid || f.paid_amount));
         return PAID_STATUSES.has(status) && due <= 0;
     }).length, [fees]);
+
+    // Handler: date confirmed from picker (includes Today button tap)
+    const handleDateConfirm = useCallback((date: Date) => {
+        setDatePickerVisibility(false);
+        setCurrentDate(date);
+        STORE.dirty = true;
+    }, []);
 
     return (
         <View style={S.container}>
@@ -650,21 +729,43 @@ export default function FinanceScreen() {
                     >
                         <Calendar size={18} color={theme.primary} />
                         <Text style={S.dateBadgeTextLarge}>{getMonthLabel()}</Text>
-                        <ChevronRight color="#94A3B8" size={20} />
+                        {/* Show inline spinner when month is loading */}
+                        {monthLoading
+                            ? <ActivityIndicator size="small" color={theme.primary} />
+                            : <ChevronRight color="#94A3B8" size={20} />
+                        }
                     </TouchableOpacity>
                 </View>
 
+                {/* Native date picker + Today overlay */}
                 <DateTimePickerModal
                     isVisible={isDatePickerVisible}
                     mode="date"
                     date={currentDate}
-                    onConfirm={(date) => {
-                        setDatePickerVisibility(false);
-                        setCurrentDate(date);
-                        STORE.dirty = true;
-                    }}
+                    onConfirm={handleDateConfirm}
                     onCancel={() => setDatePickerVisibility(false)}
                 />
+
+                {/* TODAY quick-select — rendered as a floating pill above the native picker */}
+                {isDatePickerVisible && (
+                    <Modal visible transparent animationType="fade" onRequestClose={() => setDatePickerVisibility(false)}>
+                        <View style={DP.overlay} pointerEvents="box-none">
+                            <View style={DP.todayContainer} pointerEvents="auto">
+                                <TouchableOpacity
+                                    style={[DP.todayBtn, { borderColor: theme.primary }]}
+                                    activeOpacity={0.85}
+                                    onPress={() => {
+                                        setDatePickerVisibility(false);
+                                        handleDateConfirm(new Date());
+                                    }}
+                                >
+                                    <Calendar size={14} color={theme.primary} />
+                                    <Text style={[DP.todayText, { color: theme.primary }]}>Today</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </Modal>
+                )}
 
                 {mode === 'Rent' && (
                     <View style={S.simpleFilterRow}>
@@ -697,52 +798,67 @@ export default function FinanceScreen() {
                     <Text style={S.loaderText}>Loading...</Text>
                 </View>
             ) : (
-                <FlatList
-                    key={mode}
-                    data={filteredData}
-                    keyExtractor={mode === 'Rent' ? rentKeyExtractor : expenseKeyExtractor}
-                    renderItem={mode === 'Rent' ? renderRentItem : renderExpenseItem}
-                    contentContainerStyle={S.listContent}
-                    refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={() => { STORE.dirty = true; fetchData(true); }} />
-                    }
-                    showsVerticalScrollIndicator={false}
-                    initialNumToRender={10} maxToRenderPerBatch={10} windowSize={7}
-                    removeClippedSubviews={Platform.OS === 'android'}
-                    ListHeaderComponent={
-                        mode === 'Rent' ? (
-                            <View style={S.summaryGrid}>
-                                <View style={[S.sumCard, { borderColor: '#3B82F6' }]}>
-                                    <Text style={[S.sumLabel, { color: '#3B82F6' }]}>TOTAL RENT</Text>
-                                    <Text style={S.sumValue}>₹{summary?.total_due || 0}</Text>
+                <View style={{ flex: 1 }}>
+                    <FlatList
+                        key={mode}
+                        data={filteredData}
+                        keyExtractor={mode === 'Rent' ? rentKeyExtractor : expenseKeyExtractor}
+                        renderItem={mode === 'Rent' ? renderRentItem : renderExpenseItem}
+                        contentContainerStyle={S.listContent}
+                        refreshControl={
+                            <RefreshControl refreshing={refreshing} onRefresh={() => { STORE.dirty = true; fetchData(true); }} />
+                        }
+                        showsVerticalScrollIndicator={false}
+                        initialNumToRender={10} maxToRenderPerBatch={10} windowSize={7}
+                        removeClippedSubviews={Platform.OS === 'android'}
+                        ListHeaderComponent={
+                            mode === 'Rent' ? (
+                                <View style={S.summaryGrid}>
+                                    <View style={[S.sumCard, { borderColor: '#3B82F6' }]}>
+                                        <Text style={[S.sumLabel, { color: '#3B82F6' }]}>TOTAL RENT</Text>
+                                        <Text style={S.sumValue}>₹{summary?.total_due || 0}</Text>
+                                    </View>
+                                    <View style={[S.sumCard, { borderColor: '#10B981' }]}>
+                                        <Text style={[S.sumLabel, { color: '#10B981' }]}>PAID</Text>
+                                        <Text style={S.sumValue}>₹{summary?.total_paid || 0}</Text>
+                                    </View>
+                                    <View style={[S.sumCard, { borderColor: '#EF4444' }]}>
+                                        <Text style={[S.sumLabel, { color: '#EF4444' }]}>PENDING</Text>
+                                        <Text style={S.sumValue}>₹{summary?.total_pending || 0}</Text>
+                                    </View>
                                 </View>
-                                <View style={[S.sumCard, { borderColor: '#10B981' }]}>
-                                    <Text style={[S.sumLabel, { color: '#10B981' }]}>PAID</Text>
-                                    <Text style={S.sumValue}>₹{summary?.total_paid || 0}</Text>
+                            ) : null
+                        }
+                        ListEmptyComponent={
+                            !monthLoading ? (
+                                <View style={S.emptyWrap}>
+                                    <Text style={S.emptyEmoji}>
+                                        {mode === 'Rent'
+                                            ? statusFilter === 'Paid' ? '🎉' : '✅'
+                                            : '📋'}
+                                    </Text>
+                                    <Text style={S.emptyText}>
+                                        {mode === 'Rent'
+                                            ? `No ${statusFilter.toLowerCase()} records found`
+                                            : 'No expenses found'}
+                                    </Text>
                                 </View>
-                                <View style={[S.sumCard, { borderColor: '#EF4444' }]}>
-                                    <Text style={[S.sumLabel, { color: '#EF4444' }]}>PENDING</Text>
-                                    <Text style={S.sumValue}>₹{summary?.total_pending || 0}</Text>
-                                </View>
-                            </View>
-                        ) : null
-                    }
-                    ListEmptyComponent={
-                        <View style={S.emptyWrap}>
-                            <Text style={S.emptyEmoji}>
-                                {mode === 'Rent'
-                                    ? statusFilter === 'Paid' ? '🎉' : '✅'
-                                    : '📋'}
-                            </Text>
-                            <Text style={S.emptyText}>
-                                {mode === 'Rent'
-                                    ? `No ${statusFilter.toLowerCase()} records found`
-                                    : 'No expenses found'}
-                            </Text>
+                            ) : null
+                        }
+                    />
 
+                    {/* Month-change loading overlay — sits on top of the list, non-blocking */}
+                    {monthLoading && (
+                        <View style={S.monthLoadingOverlay} pointerEvents="none">
+                            <View style={S.monthLoadingPill}>
+                                <ActivityIndicator color={theme.primary} size="small" />
+                                <Text style={[S.monthLoadingText, { color: theme.primary }]}>
+                                    Loading…
+                                </Text>
+                            </View>
                         </View>
-                    }
-                />
+                    )}
+                </View>
             )}
 
             {mode === 'Expense' && (
@@ -767,8 +883,6 @@ export default function FinanceScreen() {
                 onConfirm={handleCollectRent}
                 themeColor={theme.primary}
             />
-
-
         </View>
     );
 }
@@ -856,6 +970,32 @@ const S = StyleSheet.create({
     clearDateText: { fontSize: 13, color: '#EF4444', fontWeight: '700' },
     fab: { position: 'absolute', bottom: 130, right: 20, width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', elevation: 10, zIndex: 999 },
 
+    // Month-change loading overlay
+    monthLoadingOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(248,250,252,0.7)',
+        zIndex: 10,
+    },
+    monthLoadingPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        backgroundColor: '#FFF',
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderRadius: 30,
+        elevation: 6,
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+    },
+    monthLoadingText: {
+        fontSize: 14,
+        fontWeight: '700',
+    },
+
     // Modal / Drawer
     modalRoot: { flex: 1 },
     modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)', zIndex: 0 },
@@ -904,4 +1044,38 @@ const S = StyleSheet.create({
     sumCard: { flex: 1, backgroundColor: '#FFF', borderRadius: 14, padding: 10, borderWidth: 1, alignItems: 'center', elevation: 1 },
     sumLabel: { fontSize: 9, fontWeight: '800', marginBottom: 4 },
     sumValue: { fontSize: 15, fontWeight: '900', color: '#1E293B' },
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  DATE PICKER TODAY OVERLAY STYLES
+// ─────────────────────────────────────────────────────────────────────────────
+const DP = StyleSheet.create({
+    overlay: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        paddingBottom: Platform.OS === 'ios' ? 320 : 260, // sits just above native picker
+    },
+    todayContainer: {
+        alignItems: 'center',
+        paddingBottom: 12,
+    },
+    todayBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: '#FFF',
+        paddingHorizontal: 28,
+        paddingVertical: 13,
+        borderRadius: 30,
+        borderWidth: 2,
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+    },
+    todayText: {
+        fontSize: 15,
+        fontWeight: '800',
+        letterSpacing: 0.3,
+    },
 });
