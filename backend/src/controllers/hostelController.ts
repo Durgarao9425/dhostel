@@ -4,8 +4,9 @@ import { AuthRequest } from '../middleware/auth.js';
 
 export const createHostel = async (req: AuthRequest, res: Response) => {
   try {
+    const user = req.user;
     // Verify Main Admin (role_id = 1)
-    if (req.user?.role_id !== 1) {
+    if (user && user.role_id !== 1) {
       return res.status(403).json({
         success: false,
         error: 'Access denied. Main Admin only.'
@@ -121,6 +122,7 @@ export const createHostel = async (req: AuthRequest, res: Response) => {
 // Get all hostels with owner information
 export const getAllHostels = async (req: AuthRequest, res: Response) => {
   try {
+    const user = req.user;
     let query = db('hostel_master as h')
       .leftJoin('users as u', 'h.owner_id', 'u.user_id')
       .select(
@@ -143,8 +145,8 @@ export const getAllHostels = async (req: AuthRequest, res: Response) => {
       .where({ 'h.is_active': 1 });
 
     // If user is hostel owner (role_id = 2), filter by their owner_id
-    if (req.user?.role_id === 2) {
-      query = query.where({ 'h.owner_id': req.user.user_id });
+    if (user && user.role_id === 2) {
+      query = query.where({ 'h.owner_id': user.user_id });
     }
 
     const hostels = await query.orderBy('h.created_at', 'desc');
@@ -235,6 +237,7 @@ export const getHostelDetails = async (req: AuthRequest, res: Response) => {
 
 export const updateHostel = async (req: AuthRequest, res: Response) => {
   try {
+    const user = req.user;
     const { hostelId } = req.params;
 
     // Check if hostel exists
@@ -250,12 +253,12 @@ export const updateHostel = async (req: AuthRequest, res: Response) => {
     }
 
     // Verify permissions: Admin can edit any, Owner can edit only their own
-    if (req.user?.role_id === 2 && existingHostel.owner_id !== req.user.user_id) {
+    if (user && user.role_id === 2 && existingHostel.owner_id !== user.user_id) {
       return res.status(403).json({
         success: false,
         error: 'Access denied. You can only edit your own hostel.'
       });
-    } else if (req.user?.role_id !== 1 && req.user?.role_id !== 2) {
+    } else if (user && user.role_id !== 1 && user.role_id !== 2) {
       return res.status(403).json({
         success: false,
         error: 'Access denied.'
@@ -286,10 +289,10 @@ export const updateHostel = async (req: AuthRequest, res: Response) => {
     // - For owners: use existing owner_id (they can't change it)
     // - For admins: require owner_id in request body
     let finalOwnerId: number;
-    if (req.user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       // Owner editing their own hostel - use existing owner_id
       finalOwnerId = existingHostel.owner_id;
-    } else if (req.user?.role_id === 1) {
+    } else if (user && user.role_id === 1) {
       // Admin editing - require owner_id in request
       if (!owner_id) {
         return res.status(400).json({
@@ -404,8 +407,9 @@ export const updateHostel = async (req: AuthRequest, res: Response) => {
 
 export const deleteHostel = async (req: AuthRequest, res: Response) => {
   try {
+    const user = req.user;
     // Verify Main Admin (role_id = 1)
-    if (req.user?.role_id !== 1) {
+    if (user && user.role_id !== 1) {
       return res.status(403).json({
         success: false,
         error: 'Access denied. Main Admin only.'

@@ -45,7 +45,7 @@ export const getRooms = async (req: AuthRequest, res: Response) => {
       );
 
     // If user is hostel owner (role_id = 2), filter by their hostel_id from JWT token
-    if (user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       if (!user.hostel_id) {
         return res.status(403).json({
           success: false,
@@ -57,7 +57,7 @@ export const getRooms = async (req: AuthRequest, res: Response) => {
     }
 
     // Filter by specific hostel if provided (admin use case)
-    if (hostelId && user?.role_id === 1) {
+    if (hostelId && user && user.role_id === 1) {
       query = query.where('r.hostel_id', hostelId);
     }
 
@@ -229,7 +229,7 @@ export const createRoom = async (req: AuthRequest, res: Response) => {
     // Determine the hostel_id to use
     let finalHostelId: number;
 
-    if (user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       // Owner can only create rooms in their own hostel
       if (!user.hostel_id) {
         return res.status(403).json({
@@ -238,7 +238,7 @@ export const createRoom = async (req: AuthRequest, res: Response) => {
         });
       }
       finalHostelId = user.hostel_id;
-    } else if (user?.role_id === 1) {
+    } else if (user && user.role_id === 1) {
       // Admin can specify hostel_id
       if (!hostel_id) {
         return res.status(400).json({
@@ -333,7 +333,7 @@ export const updateRoom = async (req: AuthRequest, res: Response) => {
     }
 
     // If user is hostel owner, verify they own this room's hostel
-    if (user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       if (!user.hostel_id) {
         return res.status(403).json({
           success: false,
@@ -397,7 +397,7 @@ export const deleteRoom = async (req: AuthRequest, res: Response) => {
     }
 
     // If user is hostel owner, verify they own this room's hostel
-    if (user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       if (!user.hostel_id) {
         return res.status(403).json({
           success: false,

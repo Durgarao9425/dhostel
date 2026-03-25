@@ -10,7 +10,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
     // Determine hostel filtering based on user role
     let hostelIds: number[] = [];
 
-    if (user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       // Hostel owner - use hostel from JWT token
       if (!user.hostel_id) {
         return res.status(403).json({
@@ -215,7 +215,7 @@ export const getIncomeReport = async (req: AuthRequest, res: Response) => {
       .orderBy('month', 'desc');
 
     // Owner filtering - use JWT hostel_id
-    if (user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       if (!user.hostel_id) {
         return res.status(403).json({
           success: false,
@@ -226,7 +226,7 @@ export const getIncomeReport = async (req: AuthRequest, res: Response) => {
     }
 
     // Apply filters
-    if (hostelId && user?.role_id !== 2) {
+    if (hostelId && user && user.role_id !== 2) {
       query = query.where('fp.hostel_id', hostelId);
     }
 
@@ -277,7 +277,7 @@ export const getExpenseReport = async (req: AuthRequest, res: Response) => {
       .orderBy('month', 'desc');
 
     // Owner filtering - use JWT hostel_id
-    if (user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       if (!user.hostel_id) {
         return res.status(403).json({
           success: false,
@@ -288,7 +288,7 @@ export const getExpenseReport = async (req: AuthRequest, res: Response) => {
     }
 
     // Apply filters
-    if (hostelId && user?.role_id !== 2) {
+    if (hostelId && user && user.role_id !== 2) {
       query = query.where('e.hostel_id', hostelId);
     }
 
@@ -346,7 +346,7 @@ export const getProfitLoss = async (req: AuthRequest, res: Response) => {
 
     // Get hostel IDs for owner
     let hostelIds: number[] = [];
-    if (user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       if (!user.hostel_id) {
         return res.status(403).json({
           success: false,
@@ -366,7 +366,7 @@ export const getProfitLoss = async (req: AuthRequest, res: Response) => {
       .groupBy('month')
       .orderBy('month');
 
-    if (hostelId && user?.role_id !== 2) {
+    if (hostelId && user && user.role_id !== 2) {
       incomeQuery = incomeQuery.where('hostel_id', hostelId);
     } else if (hostelIds.length > 0) {
       incomeQuery = incomeQuery.whereIn('hostel_id', hostelIds);
@@ -384,7 +384,7 @@ export const getProfitLoss = async (req: AuthRequest, res: Response) => {
       .groupBy('month')
       .orderBy('month');
 
-    if (hostelId && user?.role_id !== 2) {
+    if (hostelId && user && user.role_id !== 2) {
       expensesQuery = expensesQuery.where('hostel_id', hostelId);
     } else if (hostelIds.length > 0) {
       expensesQuery = expensesQuery.whereIn('hostel_id', hostelIds);
@@ -458,7 +458,7 @@ export const getOccupancyTrends = async (req: AuthRequest, res: Response) => {
 
     // Get hostel IDs for owner
     let hostelIds: number[] = [];
-    if (user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       if (!user.hostel_id) {
         return res.status(403).json({
           success: false,
@@ -494,7 +494,7 @@ export const getOccupancyTrends = async (req: AuthRequest, res: Response) => {
       )
       .groupBy('h.hostel_id', 'h.hostel_name');
 
-    if (hostelId && user?.role_id !== 2) {
+    if (hostelId && user && user.role_id !== 2) {
       query = query.where('h.hostel_id', hostelId);
     } else if (hostelIds.length > 0) {
       query = query.whereIn('h.hostel_id', hostelIds);
@@ -535,7 +535,7 @@ export const getPaymentCollectionReport = async (req: AuthRequest, res: Response
 
     // Get hostel IDs for owner
     let hostelIds: number[] = [];
-    if (user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       if (!user.hostel_id) {
         return res.status(403).json({
           success: false,
@@ -565,7 +565,7 @@ export const getPaymentCollectionReport = async (req: AuthRequest, res: Response
       .sum('amount as total')
       .count('* as count');
 
-    if (hostelId && user?.role_id !== 2) {
+    if (hostelId && user && user.role_id !== 2) {
       collectedQuery = collectedQuery.where('hostel_id', hostelId);
     } else if (hostelIds.length > 0) {
       collectedQuery = collectedQuery.whereIn('hostel_id', hostelIds);
@@ -579,7 +579,7 @@ export const getPaymentCollectionReport = async (req: AuthRequest, res: Response
       .sum('balance as total')
       .count('* as count');
 
-    if (hostelId && user?.role_id !== 2) {
+    if (hostelId && user && user.role_id !== 2) {
       pendingQuery = pendingQuery.where('hostel_id', hostelId);
     } else if (hostelIds.length > 0) {
       pendingQuery = pendingQuery.whereIn('hostel_id', hostelIds);
@@ -598,7 +598,7 @@ export const getPaymentCollectionReport = async (req: AuthRequest, res: Response
       )
       .groupBy('pm.payment_mode_name');
 
-    if (hostelId && user?.role_id !== 2) {
+    if (hostelId && user && user.role_id !== 2) {
       modeQuery = modeQuery.where('fp.hostel_id', hostelId);
     } else if (hostelIds.length > 0) {
       modeQuery = modeQuery.whereIn('fp.hostel_id', hostelIds);

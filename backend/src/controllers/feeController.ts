@@ -37,7 +37,7 @@ export const getFeePayments = async (req: AuthRequest, res: Response) => {
       );
 
     // If user is hostel owner, filter by their current hostel from JWT
-    if (user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       if (!user.hostel_id) {
         return res.status(403).json({
           success: false,
@@ -116,7 +116,7 @@ export const getStudentPaymentHistory = async (req: AuthRequest, res: Response) 
       .where('fp.student_id', studentId);
 
     // If user is hostel owner, filter by their current hostel from JWT
-    if (user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       if (!user.hostel_id) {
         return res.status(403).json({
           success: false,
@@ -353,7 +353,7 @@ export const getAvailableMonths = async (req: AuthRequest, res: Response) => {
       .orderBy('fee_month', 'desc');
 
     // If user is hostel owner, filter by their hostel
-    if (user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       if (!user.hostel_id) {
         return res.status(403).json({
           success: false,

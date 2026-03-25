@@ -26,7 +26,7 @@ export const getStudents = async (req: AuthRequest, res: Response) => {
         's.admission_date as check_in_date'
       );
 
-    if (user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       if (user.hostel_id) {
         query = query.where('s.hostel_id', user.hostel_id);
       } else {
@@ -184,7 +184,7 @@ export const createStudent = async (req: AuthRequest, res: Response) => {
 
     // Determine hostel_id from JWT token for owners
     let hostel_id: number;
-    if (user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       if (!user.hostel_id) {
         return res.status(403).json({
           success: false,
@@ -192,7 +192,7 @@ export const createStudent = async (req: AuthRequest, res: Response) => {
         });
       }
       hostel_id = user.hostel_id;
-    } else if (user?.role_id === 1) {
+    } else if (user && user.role_id === 1) {
       // Admin can specify hostel_id
       hostel_id = req.body.hostel_id;
       if (!hostel_id) {

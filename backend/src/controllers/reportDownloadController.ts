@@ -43,7 +43,7 @@ export const downloadPDFReport = async (req: AuthRequest, res: Response) => {
     let hostelId: number;
     let hostelName = 'Hostel';
 
-    if (user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       if (!user.hostel_id) {
         return res.status(403).json({
           success: false,
@@ -353,7 +353,7 @@ export const downloadExcelReport = async (req: AuthRequest, res: Response) => {
     let hostelId: number;
     let hostelName = 'Hostel';
 
-    if (user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       if (!user.hostel_id) {
         return res.status(403).json({
           success: false,
