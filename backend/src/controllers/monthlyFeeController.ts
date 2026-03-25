@@ -364,7 +364,7 @@ export const getMonthlyFees = async (req: AuthRequest, res: Response) => {
       .groupBy('mf.fee_id');
 
     // Authorization check: hostel owner can only see their own hostel
-    if (user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       if (!user.hostel_id) {
         return res.status(403).json({
           success: false,
@@ -522,7 +522,7 @@ export const getMonthlyFeesSummary = async (req: AuthRequest, res: Response) => 
     }
 
     // Authorization check
-    if (user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       // Owner logic: check if they have a primary hostel_id in token, 
       // or fetch all hostels they own if not.
       if (user.hostel_id) {
@@ -719,7 +719,7 @@ export const getMonthlyFeesSummary = async (req: AuthRequest, res: Response) => 
         .sum('fp.amount as total');
 
       // Apply hostel filter (replicating authorization logic for consistent results)
-      if (user?.role_id === 2) {
+      if (user && user.role_id === 2) {
         if (user.hostel_id) {
           todayQuery = todayQuery.where('s.hostel_id', user.hostel_id);
         } else {

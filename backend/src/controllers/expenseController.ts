@@ -20,7 +20,7 @@ export const getExpenses = async (req: AuthRequest, res: Response) => {
       );
 
     // If user is hostel owner, filter by their hostel from JWT
-    if (user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       if (!user.hostel_id) {
         return res.status(403).json({
           success: false,
@@ -121,7 +121,7 @@ export const createExpense = async (req: AuthRequest, res: Response) => {
     // Determine hostel_id based on user role
     let hostel_id: number;
 
-    if (user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       // Hostel owner - use hostel from JWT
       if (!user.hostel_id) {
         return res.status(403).json({
@@ -150,7 +150,7 @@ export const createExpense = async (req: AuthRequest, res: Response) => {
       vendor_name,
       description,
       bill_number,
-      created_by: req.user?.user_id,
+      created_by: user?.user_id,
       created_at: new Date()
     });
 
@@ -187,7 +187,7 @@ export const updateExpense = async (req: AuthRequest, res: Response) => {
     }
 
     // If user is hostel owner, ensure they can only update their own hostel's expense
-    if (user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       if (!user.hostel_id) {
         return res.status(403).json({
           success: false,
@@ -251,7 +251,7 @@ export const deleteExpense = async (req: AuthRequest, res: Response) => {
     }
 
     // If user is hostel owner, ensure they can only delete their own hostel's expense
-    if (user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       if (!user.hostel_id) {
         return res.status(403).json({
           success: false,
@@ -344,7 +344,7 @@ export const getExpenseSummary = async (req: AuthRequest, res: Response) => {
       .groupBy('ec.category_id', 'ec.category_name');
 
     // If user is hostel owner, filter by their hostel from JWT
-    if (user?.role_id === 2) {
+    if (user && user.role_id === 2) {
       if (!user.hostel_id) {
         return res.status(403).json({
           success: false,
@@ -387,8 +387,8 @@ export const cloneExpenses = async (req: AuthRequest, res: Response) => {
     }
 
     let hostel_id: number;
-    if (Number(user?.role_id) === 2) {
-      if (!user?.hostel_id) return res.status(403).json({ success: false, error: 'Not linked to a hostel' });
+    if (user && Number(user.role_id) === 2) {
+      if (!user.hostel_id) return res.status(403).json({ success: false, error: 'Not linked to a hostel' });
       hostel_id = user.hostel_id;
     } else {
       hostel_id = parseInt(req.body.hostel_id);
