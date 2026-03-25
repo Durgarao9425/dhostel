@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "NODE_ENV=production node dist/server.js",
-    "start:dev": "tsx watch src/server.ts",
+    "start": "NODE_ENV=production node dist/index.js",
+    "start:dev": "tsx watch src/index.ts",
     "migrate": "knex migrate:latest",
     "seed": "knex seed:run",
     "init:relations": "tsx scripts/initializeRelationsTable.ts",
